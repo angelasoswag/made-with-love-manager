@@ -62,62 +62,42 @@ function Dashboard() {
       : date.getTime();
   }
 
-  function getMonthKey(value) {
-    if (!value) return "";
-
-    const text = String(value).trim();
-
-    const dateMatch = text.match(
-      /^(\d{4})-(\d{2})/
-    );
-
-    if (dateMatch) {
-      return `${dateMatch[1]}-${dateMatch[2]}`;
-    }
-
-    const date = new Date(text);
-
-    if (Number.isNaN(date.getTime())) {
-      return "";
-    }
-
-    const year = date.getFullYear();
-
-    const month = String(
-      date.getMonth() + 1
-    ).padStart(2, "0");
-
-    return `${year}-${month}`;
-  }
-
-  const currentMonthKey = useMemo(() => {
-    const today = new Date();
-
-    const year = today.getFullYear();
-
-    const month = String(
-      today.getMonth() + 1
-    ).padStart(2, "0");
-
-    return `${year}-${month}`;
-  }, []);
-
   const monthlyProfit = useMemo(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+
     return orders.reduce((total, order) => {
-      const orderDate =
-        order.orderDate ||
-        order.createdAt ||
-        order.created_at;
+      /*
+       * Only use the actual date ordered.
+       * Do not use createdAt as a fallback here.
+       */
+      if (!order.orderDate) {
+        return total;
+      }
 
-      const orderMonth = getMonthKey(orderDate);
+      const dateParts = String(order.orderDate)
+        .slice(0, 10)
+        .split("-");
 
-      if (orderMonth !== currentMonthKey) {
+      if (dateParts.length !== 3) {
+        return total;
+      }
+
+      const year = Number(dateParts[0]);
+      const month = Number(dateParts[1]);
+
+      const isCurrentMonth =
+        year === currentYear &&
+        month === currentMonth;
+
+      if (!isCurrentMonth) {
         return total;
       }
 
       return total + (Number(order.profit) || 0);
     }, 0);
-  }, [orders, currentMonthKey]);
+  }, [orders]);
 
   const goalPercentage = Math.min(
     100,
@@ -276,7 +256,9 @@ function Dashboard() {
         <article className="summary-card">
           <span>🌷 Orders</span>
 
-          <strong>{totals.totalOrders}</strong>
+          <strong>
+            {totals.totalOrders}
+          </strong>
 
           <small>
             All selling platforms
@@ -286,7 +268,9 @@ function Dashboard() {
         <article className="summary-card">
           <span>🩰 Products</span>
 
-          <strong>{totals.totalProducts}</strong>
+          <strong>
+            {totals.totalProducts}
+          </strong>
 
           <small>
             Active catalog products

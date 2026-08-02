@@ -3329,3 +3329,68 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .order-avatar span {
   font-size: 24px;
 }
+/* ---------- FIX TOP PRODUCTS MOBILE OVERLAP ---------- */
+
+.top-product-row {
+  display: grid !important;
+  grid-template-columns: 56px 72px minmax(0, 1fr) !important;
+  grid-template-areas:
+    "rank image info"
+    "rank image profit" !important;
+  align-items: center !important;
+  column-gap: 14px !important;
+  row-gap: 8px !important;
+  padding: 22px 0 !important;
+}
+
+.product-rank {
+  grid-area: rank !important;
+}
+
+.top-product-image {
+  grid-area: image !important;
+  width: 72px !important;
+  height: 72px !important;
+  min-width: 72px !important;
+}
+
+.top-product-info {
+  grid-area: info !important;
+  min-width: 0 !important;
+}
+
+.top-product-info strong {
+  display: block !important;
+  line-height: 1.3 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.top-product-info span {
+  display: block !important;
+  margin-top: 6px !important;
+}
+
+.top-product-revenue {
+  grid-area: profit !important;
+  justify-self: start !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: 1.25 !important;
+}
+
+.top-product-revenue small {
+  font-size: inherit !important;
+}
+
+@media (min-width: 700px) {
+  .top-product-row {
+    grid-template-columns: 56px 72px minmax(0, 1fr) auto !important;
+    grid-template-areas: "rank image info profit" !important;
+  }
+
+  .top-product-revenue {
+    justify-self: end !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+}
