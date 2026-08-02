@@ -79,7 +79,8 @@ function Dashboard() {
 
     const today = new Date();
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1;
+    const currentMonth =
+      today.getMonth() + 1;
 
     return (
       orderYear === currentYear &&
@@ -96,19 +97,9 @@ function Dashboard() {
   const monthlyProfit = useMemo(() => {
     return monthlyOrders.reduce(
       (total, order) =>
-        total + (Number(order.profit) || 0),
+        total +
+        (Number(order.profit) || 0),
       0
-    );
-  }, [monthlyOrders]);
-
-  useEffect(() => {
-    console.table(
-      monthlyOrders.map((order) => ({
-        customer: order.customer,
-        orderDate: order.orderDate,
-        revenue: Number(order.revenue) || 0,
-        profit: Number(order.profit) || 0
-      }))
     );
   }, [monthlyOrders]);
 
@@ -151,7 +142,8 @@ function Dashboard() {
 
       const totalQuantity = items.reduce(
         (sum, item) =>
-          sum + (Number(item.quantity) || 0),
+          sum +
+          (Number(item.quantity) || 0),
         0
       );
 
@@ -223,73 +215,7 @@ function Dashboard() {
             Welcome back, Maria! 🧚
           </p>
         </div>
-
-        <div className="hero-actions">
-          <Link
-            className="primary-action"
-            to="/new-order"
-          >
-            🌷 New Order
-          </Link>
-
-          <Link
-            className="secondary-action"
-            to="/products"
-          >
-            🩰 Product Catalog
-          </Link>
-        </div>
       </header>
-
-      <section className="summary-grid">
-        <article className="summary-card featured-summary">
-          <span>💌 Revenue</span>
-
-          <strong>
-            ${Number(totals.revenue).toFixed(2)}
-          </strong>
-
-          <small>
-            From {totals.totalOrders} orders
-          </small>
-        </article>
-
-        <article className="summary-card">
-          <span>🤍 Profit</span>
-
-          <strong>
-            ${Number(totals.profit).toFixed(2)}
-          </strong>
-
-          <small>
-            After business expenses
-          </small>
-        </article>
-
-        <article className="summary-card">
-          <span>🌷 Orders</span>
-
-          <strong>
-            {totals.totalOrders}
-          </strong>
-
-          <small>
-            All selling platforms
-          </small>
-        </article>
-
-        <article className="summary-card">
-          <span>🩰 Products</span>
-
-          <strong>
-            {totals.totalProducts}
-          </strong>
-
-          <small>
-            Active catalog products
-          </small>
-        </article>
-      </section>
 
       <section className="dashboard-panel goal-panel">
         <div className="panel-heading">
@@ -324,8 +250,64 @@ function Dashboard() {
             : `$${Math.max(
                 0,
                 monthlyGoal - monthlyProfit
-              ).toFixed(2)} left to reach your monthly profit goal.`}
+              ).toFixed(
+                2
+              )} left to reach your monthly profit goal.`}
         </p>
+      </section>
+
+      <section className="summary-grid">
+        <article className="summary-card featured-summary">
+          <span>💌 Revenue</span>
+
+          <strong>
+            ${Number(
+              totals.revenue
+            ).toFixed(2)}
+          </strong>
+
+          <small>
+            From {totals.totalOrders} orders
+          </small>
+        </article>
+
+        <article className="summary-card">
+          <span>🤍 Profit</span>
+
+          <strong>
+            ${Number(
+              totals.profit
+            ).toFixed(2)}
+          </strong>
+
+          <small>
+            After business expenses
+          </small>
+        </article>
+
+        <article className="summary-card">
+          <span>🌷 Orders</span>
+
+          <strong>
+            {totals.totalOrders}
+          </strong>
+
+          <small>
+            All selling platforms
+          </small>
+        </article>
+
+        <article className="summary-card">
+          <span>🩰 Products</span>
+
+          <strong>
+            {totals.totalProducts}
+          </strong>
+
+          <small>
+            Active catalog products
+          </small>
+        </article>
       </section>
 
       <section className="dashboard-columns">
@@ -395,9 +377,11 @@ function Dashboard() {
 
                         <span>
                           {order.platform} ·{" "}
-                          {order.items?.length || 0}{" "}
+                          {order.items?.length ||
+                            0}{" "}
                           product
-                          {order.items?.length === 1
+                          {order.items?.length ===
+                          1
                             ? ""
                             : "s"}
                         </span>
@@ -487,7 +471,11 @@ function Dashboard() {
                     </div>
 
                     <strong className="top-product-revenue">
-                      ${product.profit.toFixed(2)}
+                      $
+                      {product.profit.toFixed(
+                        2
+                      )}
+
                       <small> profit</small>
                     </strong>
                   </div>
@@ -527,7 +515,10 @@ function Dashboard() {
               <span>{platform}</span>
 
               <strong>
-                ${Number(revenue).toFixed(2)}
+                $
+                {Number(
+                  revenue
+                ).toFixed(2)}
               </strong>
             </div>
           ))}
@@ -535,7 +526,8 @@ function Dashboard() {
       </section>
 
       <p className="dashboard-footer">
-        🌷 Made with love for your small business 🤍
+        🌷 Made with love for your small
+        business 🤍
       </p>
     </main>
   );

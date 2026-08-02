@@ -891,6 +891,80 @@ async function restockProduct(product) {
           })}
         </section>
       )}
+<section className="restock-section">
+  <div className="panel-heading">
+    <div>
+      <p className="section-eyebrow">
+        📦 Inventory
+      </p>
+
+      <h2>Restock Needed</h2>
+    </div>
+  </div>
+
+  {products.filter(
+    (product) =>
+      product.active !== false &&
+      (Number(product.stock) || 0) <=
+        (Number(product.low_stock_threshold) || 2)
+  ).length === 0 ? (
+    <div className="dashboard-empty">
+      <span>🌷</span>
+      <p>Everything is currently stocked!</p>
+    </div>
+  ) : (
+    <div className="restock-list">
+      {[...products]
+        .filter(
+          (product) =>
+            product.active !== false &&
+            (Number(product.stock) || 0) <=
+              (Number(
+                product.low_stock_threshold
+              ) || 2)
+        )
+        .sort(
+          (a, b) =>
+            (Number(a.stock) || 0) -
+            (Number(b.stock) || 0)
+        )
+        .map((product) => (
+          <div
+            className="restock-row"
+            key={product.id}
+          >
+            <div className="restock-image">
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                />
+              ) : (
+                <span>🩰</span>
+              )}
+            </div>
+
+            <div className="restock-info">
+              <strong>{product.name}</strong>
+
+              <span>
+                {Number(product.stock) || 0} left in
+                stock
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="restock-product-button"
+              onClick={() => restockProduct(product)}
+            >
+              📦 Restock
+            </button>
+          </div>
+        ))}
+    </div>
+  )}
+</section>
     </main>
   );
 }
