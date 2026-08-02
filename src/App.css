@@ -3175,3 +3175,24 @@ button{
     grid-column: auto;
   }
 }
+/* Fix oversized product preview image */
+
+.product-preview img {
+  width: 100px !important;
+  height: 100px !important;
+  max-width: 100px !important;
+  max-height: 100px !important;
+  object-fit: contain !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+}
+
+.product-preview {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.product-preview div:last-child {
+  flex: 1;
+}
