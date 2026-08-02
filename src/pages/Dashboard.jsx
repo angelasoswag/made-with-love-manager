@@ -143,8 +143,20 @@ function Dashboard() {
         productSales[productId].quantity +=
           Number(item.quantity) || 0;
 
-        productSales[productId].revenue +=
-          Number(item.lineRevenue) || 0;
+        const totalQuantity = order.items?.reduce(
+  (sum, orderItem) =>
+    sum + (Number(orderItem.quantity) || 0),
+  0
+) || 1;
+
+const itemQuantity =
+  Number(item.quantity) || 0;
+
+const itemProfit =
+  (Number(order.profit) || 0) *
+  (itemQuantity / totalQuantity);
+
+productSales[productId].revenue += itemProfit;
       });
     });
 
