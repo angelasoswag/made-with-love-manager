@@ -62,42 +62,55 @@ function Dashboard() {
       : date.getTime();
   }
 
-  const monthlyProfit = useMemo(() => {
+  function isDateInCurrentMonth(dateValue) {
+    if (!dateValue) return false;
+
+    const dateText = String(dateValue)
+      .slice(0, 10);
+
+    const match = dateText.match(
+      /^(\d{4})-(\d{2})-(\d{2})$/
+    );
+
+    if (!match) return false;
+
+    const orderYear = Number(match[1]);
+    const orderMonth = Number(match[2]);
+
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth() + 1;
 
-    return orders.reduce((total, order) => {
-      /*
-       * Only use the actual date ordered.
-       * Do not use createdAt as a fallback here.
-       */
-      if (!order.orderDate) {
-        return total;
-      }
+    return (
+      orderYear === currentYear &&
+      orderMonth === currentMonth
+    );
+  }
 
-      const dateParts = String(order.orderDate)
-        .slice(0, 10)
-        .split("-");
-
-      if (dateParts.length !== 3) {
-        return total;
-      }
-
-      const year = Number(dateParts[0]);
-      const month = Number(dateParts[1]);
-
-      const isCurrentMonth =
-        year === currentYear &&
-        month === currentMonth;
-
-      if (!isCurrentMonth) {
-        return total;
-      }
-
-      return total + (Number(order.profit) || 0);
-    }, 0);
+  const monthlyOrders = useMemo(() => {
+    return orders.filter((order) =>
+      isDateInCurrentMonth(order.orderDate)
+    );
   }, [orders]);
+
+  const monthlyProfit = useMemo(() => {
+    return monthlyOrders.reduce(
+      (total, order) =>
+        total + (Number(order.profit) || 0),
+      0
+    );
+  }, [monthlyOrders]);
+
+  useEffect(() => {
+    console.table(
+      monthlyOrders.map((order) => ({
+        customer: order.customer,
+        orderDate: order.orderDate,
+        revenue: Number(order.revenue) || 0,
+        profit: Number(order.profit) || 0
+      }))
+    );
+  }, [monthlyOrders]);
 
   const goalPercentage = Math.min(
     100,
@@ -311,9 +324,7 @@ function Dashboard() {
             : `$${Math.max(
                 0,
                 monthlyGoal - monthlyProfit
-              ).toFixed(
-                2
-              )} left to reach your monthly profit goal.`}
+              ).toFixed(2)} left to reach your monthly profit goal.`}
         </p>
       </section>
 
@@ -384,11 +395,9 @@ function Dashboard() {
 
                         <span>
                           {order.platform} ·{" "}
-                          {order.items?.length ||
-                            0}{" "}
+                          {order.items?.length || 0}{" "}
                           product
-                          {order.items?.length ===
-                          1
+                          {order.items?.length === 1
                             ? ""
                             : "s"}
                         </span>

@@ -6,22 +6,23 @@ import {
 } from "../db/database";
 
 function parseDate(dateValue) {
-  if (!dateValue) {
-    return null;
-  }
+  if (!dateValue) return null;
 
-  if (
-    typeof dateValue === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-  ) {
-    const [year, month, day] = dateValue
-      .split("-")
-      .map(Number);
+  const text = String(dateValue).trim();
+
+  const dateMatch = text.match(
+    /^(\d{4})-(\d{2})-(\d{2})/
+  );
+
+  if (dateMatch) {
+    const year = Number(dateMatch[1]);
+    const month = Number(dateMatch[2]);
+    const day = Number(dateMatch[3]);
 
     return new Date(year, month - 1, day);
   }
 
-  const date = new Date(dateValue);
+  const date = new Date(text);
 
   if (Number.isNaN(date.getTime())) {
     return null;
@@ -33,9 +34,13 @@ function parseDate(dateValue) {
 function getStartOfWeek(date) {
   const start = new Date(date);
   const day = start.getDay();
-  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  const daysSinceMonday =
+    day === 0 ? 6 : day - 1;
 
-  start.setDate(start.getDate() - daysSinceMonday);
+  start.setDate(
+    start.getDate() - daysSinceMonday
+  );
+
   start.setHours(0, 0, 0, 0);
 
   return start;
@@ -47,22 +52,18 @@ function getPeriodBounds(period, offset) {
   if (period === "weekly") {
     const start = getStartOfWeek(now);
 
-    start.setDate(start.getDate() + offset * 7);
+    start.setDate(
+      start.getDate() + offset * 7
+    );
 
     const end = new Date(start);
+
     end.setDate(end.getDate() + 6);
     end.setHours(23, 59, 59, 999);
 
-    if (offset === 0) {
-      return {
-        start,
-        end: now
-      };
-    }
-
     return {
       start,
-      end
+      end: offset === 0 ? now : end
     };
   }
 
@@ -90,16 +91,9 @@ function getPeriodBounds(period, offset) {
       999
     );
 
-    if (offset === 0) {
-      return {
-        start,
-        end: now
-      };
-    }
-
     return {
       start,
-      end
+      end: offset === 0 ? now : end
     };
   }
 
@@ -123,25 +117,16 @@ function getPeriodBounds(period, offset) {
     999
   );
 
-  if (offset === 0) {
-    return {
-      start,
-      end: now
-    };
-  }
-
   return {
     start,
-    end
+    end: offset === 0 ? now : end
   };
 }
 
 function isWithinPeriod(dateValue, start, end) {
   const date = parseDate(dateValue);
 
-  if (!date) {
-    return false;
-  }
+  if (!date) return false;
 
   return date >= start && date <= end;
 }
@@ -153,15 +138,25 @@ function getPeriodLabel(period, offset) {
   );
 
   if (period === "weekly") {
-    return `${start.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    })} – ${end.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    })}`;
+    const startText = start.toLocaleDateString(
+      "en-US",
+      {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }
+    );
+
+    const endText = end.toLocaleDateString(
+      "en-US",
+      {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }
+    );
+
+    return `${startText} – ${endText}`;
   }
 
   if (period === "yearly") {
@@ -175,14 +170,20 @@ function getPeriodLabel(period, offset) {
 }
 
 function Analytics() {
-  const [period, setPeriod] = useState("monthly");
-  const [periodOffset, setPeriodOffset] = useState(0);
+  const [period, setPeriod] =
+    useState("monthly");
+
+  const [periodOffset, setPeriodOffset] =
+    useState(0);
 
   const [orders, setOrders] = useState([]);
   const [expenses, setExpenses] = useState([]);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
   useEffect(() => {
     loadAnalytics();
@@ -241,20 +242,23 @@ function Analytics() {
       periodOffset
     );
 
-    const filteredOrders = orders.filter((order) =>
-      isWithinPeriod(
-        order.createdAt || order.created_at,
-        start,
-        end
-      )
+    /*
+     * Only use the actual Date ordered.
+     * Do not use createdAt as a fallback.
+     */
+    const filteredOrders = orders.filter(
+      (order) =>
+        isWithinPeriod(
+          order.orderDate,
+          start,
+          end
+        )
     );
 
     const filteredExpenses = expenses.filter(
       (expense) =>
         isWithinPeriod(
-          expense.date ||
-            expense.createdAt ||
-            expense.created_at,
+          expense.date,
           start,
           end
         )
@@ -262,55 +266,63 @@ function Analytics() {
 
     const revenue = filteredOrders.reduce(
       (total, order) =>
-        total + (Number(order.revenue) || 0),
+        total +
+        (Number(order.revenue) || 0),
       0
     );
 
-    const platformFees = filteredOrders.reduce(
+    /*
+     * Use the manually entered profit saved
+     * with each order.
+     */
+    const orderProfit = filteredOrders.reduce(
       (total, order) =>
-        total + (Number(order.fees) || 0),
+        total +
+        (Number(order.profit) || 0),
       0
     );
 
-    const discounts = filteredOrders.reduce(
-      (total, order) =>
-        total + (Number(order.discount) || 0),
-      0
-    );
+    const businessExpenses =
+      filteredExpenses.reduce(
+        (total, expense) =>
+          total +
+          (Number(expense.amount) || 0),
+        0
+      );
 
-    const businessExpenses = filteredExpenses.reduce(
-      (total, expense) =>
-        total + (Number(expense.amount) || 0),
-      0
-    );
+    const productsSold =
+      filteredOrders.reduce(
+        (orderTotal, order) => {
+          const items = Array.isArray(
+            order.items
+          )
+            ? order.items
+            : [];
 
-    const productsSold = filteredOrders.reduce(
-      (orderTotal, order) => {
-        const items = Array.isArray(order.items)
-          ? order.items
-          : [];
+          const unitsInOrder = items.reduce(
+            (itemTotal, item) =>
+              itemTotal +
+              (Number(item.quantity) || 0),
+            0
+          );
 
-        const unitsInOrder = items.reduce(
-          (itemTotal, item) =>
-            itemTotal +
-            (Number(item.quantity) || 0),
-          0
-        );
-
-        return orderTotal + unitsInOrder;
-      },
-      0
-    );
-
-    const grossProfit =
-      revenue - platformFees - discounts;
+          return orderTotal + unitsInOrder;
+        },
+        0
+      );
 
     const netProfit =
-      grossProfit - businessExpenses;
+      orderProfit - businessExpenses;
 
     const averageOrderValue =
       filteredOrders.length > 0
         ? revenue / filteredOrders.length
+        : 0;
+
+    const averageProfitPerOrder =
+      filteredOrders.length > 0
+        ? orderProfit /
+          filteredOrders.length
         : 0;
 
     const profitMargin =
@@ -320,14 +332,13 @@ function Analytics() {
 
     return {
       revenue,
-      platformFees,
-      discounts,
+      orderProfit,
       businessExpenses,
-      grossProfit,
       netProfit,
       totalOrders: filteredOrders.length,
       productsSold,
       averageOrderValue,
+      averageProfitPerOrder,
       profitMargin
     };
   }, [
@@ -340,11 +351,11 @@ function Analytics() {
   return (
     <main className="app analytics-page">
       <header className="page-header analytics-header">
-       <h1>Analytics</h1>
+        <h1>Analytics</h1>
 
-<p className="page-description">
-  See how your business is performing.
-</p>
+        <p className="page-description">
+          See how your business is performing.
+        </p>
       </header>
 
       <section
@@ -354,9 +365,13 @@ function Analytics() {
         <button
           type="button"
           className={
-            period === "weekly" ? "active" : ""
+            period === "weekly"
+              ? "active"
+              : ""
           }
-          onClick={() => changePeriod("weekly")}
+          onClick={() =>
+            changePeriod("weekly")
+          }
         >
           Weekly
         </button>
@@ -364,9 +379,13 @@ function Analytics() {
         <button
           type="button"
           className={
-            period === "monthly" ? "active" : ""
+            period === "monthly"
+              ? "active"
+              : ""
           }
-          onClick={() => changePeriod("monthly")}
+          onClick={() =>
+            changePeriod("monthly")
+          }
         >
           Monthly
         </button>
@@ -374,9 +393,13 @@ function Analytics() {
         <button
           type="button"
           className={
-            period === "yearly" ? "active" : ""
+            period === "yearly"
+              ? "active"
+              : ""
           }
-          onClick={() => changePeriod("yearly")}
+          onClick={() =>
+            changePeriod("yearly")
+          }
         >
           Yearly
         </button>
@@ -401,7 +424,10 @@ function Analytics() {
           </span>
 
           <strong>
-            {getPeriodLabel(period, periodOffset)}
+            {getPeriodLabel(
+              period,
+              periodOffset
+            )}
           </strong>
         </div>
 
@@ -460,31 +486,34 @@ function Analytics() {
               </strong>
 
               <small>
-                Before fees and expenses
-              </small>
-            </article>
-
-            <article className="summary-card">
-              <span>💎 Gross Profit</span>
-
-              <strong>
-                ${analytics.grossProfit.toFixed(2)}
-              </strong>
-
-              <small>
-                After fees and discounts
+                Total customer payments
               </small>
             </article>
 
             <article className="summary-card featured-summary">
-              <span>🌷 Net Profit</span>
+              <span>🌷 Order Profit</span>
+
+              <strong>
+                $
+                {analytics.orderProfit.toFixed(
+                  2
+                )}
+              </strong>
+
+              <small>
+                Your manually recorded profit
+              </small>
+            </article>
+
+            <article className="summary-card">
+              <span>🤍 Net Profit</span>
 
               <strong>
                 ${analytics.netProfit.toFixed(2)}
               </strong>
 
               <small>
-                After all expenses
+                Order profit minus expenses
               </small>
             </article>
 
@@ -493,7 +522,9 @@ function Analytics() {
 
               <strong>
                 $
-                {analytics.businessExpenses.toFixed(2)}
+                {analytics.businessExpenses.toFixed(
+                  2
+                )}
               </strong>
 
               <small>
@@ -530,7 +561,9 @@ function Analytics() {
 
               <strong>
                 $
-                {analytics.averageOrderValue.toFixed(2)}
+                {analytics.averageOrderValue.toFixed(
+                  2
+                )}
               </strong>
 
               <small>
@@ -539,10 +572,28 @@ function Analytics() {
             </article>
 
             <article className="summary-card">
-              <span>📈 Net Profit Margin</span>
+              <span>💎 Average Profit</span>
 
               <strong>
-                {analytics.profitMargin.toFixed(1)}%
+                $
+                {analytics.averageProfitPerOrder.toFixed(
+                  2
+                )}
+              </strong>
+
+              <small>
+                Profit per order
+              </small>
+            </article>
+
+            <article className="summary-card">
+              <span>📈 Profit Margin</span>
+
+              <strong>
+                {analytics.profitMargin.toFixed(
+                  1
+                )}
+                %
               </strong>
 
               <small>
@@ -570,27 +621,16 @@ function Analytics() {
               </strong>
             </div>
 
-            <div className="money-breakdown-row deduction">
-              <span>Platform fees</span>
-
-              <strong>
-                −${analytics.platformFees.toFixed(2)}
-              </strong>
-            </div>
-
-            <div className="money-breakdown-row deduction">
-              <span>Discounts</span>
-
-              <strong>
-                −${analytics.discounts.toFixed(2)}
-              </strong>
-            </div>
-
             <div className="money-breakdown-row subtotal">
-              <span>Gross profit</span>
+              <span>
+                Manually recorded order profit
+              </span>
 
               <strong>
-                ${analytics.grossProfit.toFixed(2)}
+                $
+                {analytics.orderProfit.toFixed(
+                  2
+                )}
               </strong>
             </div>
 
@@ -599,7 +639,9 @@ function Analytics() {
 
               <strong>
                 −$
-                {analytics.businessExpenses.toFixed(2)}
+                {analytics.businessExpenses.toFixed(
+                  2
+                )}
               </strong>
             </div>
 
