@@ -48,32 +48,34 @@ function Dashboard() {
   }
 
   function getOrderTimestamp(order) {
-    const dateValue =
-      order.orderDate || order.createdAt;
+    const value =
+      order.orderDate ||
+      order.createdAt ||
+      order.created_at;
 
-    if (!dateValue) return 0;
+    if (!value) return 0;
 
-    const date = new Date(dateValue);
+    const date = new Date(value);
 
     return Number.isNaN(date.getTime())
       ? 0
       : date.getTime();
   }
 
-  function getOrderMonth(order) {
-    const dateValue =
-      order.orderDate || order.createdAt;
+  function getMonthKey(value) {
+    if (!value) return "";
 
-    if (!dateValue) return "";
+    const text = String(value).trim();
 
-    if (
-      typeof dateValue === "string" &&
-      /^\d{4}-\d{2}/.test(dateValue)
-    ) {
-      return dateValue.slice(0, 7);
+    const dateMatch = text.match(
+      /^(\d{4})-(\d{2})/
+    );
+
+    if (dateMatch) {
+      return `${dateMatch[1]}-${dateMatch[2]}`;
     }
 
-    const date = new Date(dateValue);
+    const date = new Date(text);
 
     if (Number.isNaN(date.getTime())) {
       return "";
@@ -88,7 +90,7 @@ function Dashboard() {
     return `${year}-${month}`;
   }
 
-  const currentMonth = useMemo(() => {
+  const currentMonthKey = useMemo(() => {
     const today = new Date();
 
     const year = today.getFullYear();
@@ -102,16 +104,20 @@ function Dashboard() {
 
   const monthlyProfit = useMemo(() => {
     return orders.reduce((total, order) => {
-      if (getOrderMonth(order) !== currentMonth) {
+      const orderDate =
+        order.orderDate ||
+        order.createdAt ||
+        order.created_at;
+
+      const orderMonth = getMonthKey(orderDate);
+
+      if (orderMonth !== currentMonthKey) {
         return total;
       }
 
-      return (
-        total +
-        (Number(order.profit) || 0)
-      );
+      return total + (Number(order.profit) || 0);
     }, 0);
-  }, [orders, currentMonth]);
+  }, [orders, currentMonthKey]);
 
   const goalPercentage = Math.min(
     100,
@@ -247,10 +253,7 @@ function Dashboard() {
           <span>💌 Revenue</span>
 
           <strong>
-            $
-            {Number(
-              totals.revenue
-            ).toFixed(2)}
+            ${Number(totals.revenue).toFixed(2)}
           </strong>
 
           <small>
@@ -262,10 +265,7 @@ function Dashboard() {
           <span>🤍 Profit</span>
 
           <strong>
-            $
-            {Number(
-              totals.profit
-            ).toFixed(2)}
+            ${Number(totals.profit).toFixed(2)}
           </strong>
 
           <small>
@@ -276,9 +276,7 @@ function Dashboard() {
         <article className="summary-card">
           <span>🌷 Orders</span>
 
-          <strong>
-            {totals.totalOrders}
-          </strong>
+          <strong>{totals.totalOrders}</strong>
 
           <small>
             All selling platforms
@@ -288,9 +286,7 @@ function Dashboard() {
         <article className="summary-card">
           <span>🩰 Products</span>
 
-          <strong>
-            {totals.totalProducts}
-          </strong>
+          <strong>{totals.totalProducts}</strong>
 
           <small>
             Active catalog products
@@ -361,8 +357,7 @@ function Dashboard() {
               <span>💌</span>
 
               <p>
-                Your next happy customer is
-                waiting.
+                Your next happy customer is waiting.
               </p>
             </div>
           ) : (
@@ -461,8 +456,8 @@ function Dashboard() {
               <span>🩰</span>
 
               <p>
-                Product sales will appear here
-                after you save orders.
+                Product sales will appear here after
+                you save orders.
               </p>
             </div>
           ) : (
@@ -499,8 +494,7 @@ function Dashboard() {
                     </div>
 
                     <strong className="top-product-revenue">
-                      $
-                      {product.profit.toFixed(2)}
+                      ${product.profit.toFixed(2)}
                       <small> profit</small>
                     </strong>
                   </div>
@@ -540,10 +534,7 @@ function Dashboard() {
               <span>{platform}</span>
 
               <strong>
-                $
-                {Number(
-                  revenue
-                ).toFixed(2)}
+                ${Number(revenue).toFixed(2)}
               </strong>
             </div>
           ))}
@@ -551,8 +542,7 @@ function Dashboard() {
       </section>
 
       <p className="dashboard-footer">
-        🌷 Made with love for your small
-        business 🤍
+        🌷 Made with love for your small business 🤍
       </p>
     </main>
   );
