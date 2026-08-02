@@ -2370,3 +2370,136 @@ grid-template-columns: repeat(6, minmax(0, 1fr));
 .restock-product-button:hover {
   background: #edc9d9;
 }
+
+/* MOBILE BOTTOM NAV FIX */
+
+@media (max-width: 620px) {
+  .dashboard-shortcuts {
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    left: 10px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 2px;
+    max-width: none;
+    padding: 7px 5px;
+    border-radius: 24px;
+  }
+
+  .dashboard-shortcuts a {
+    min-width: 0;
+    gap: 3px;
+    padding: 8px 2px;
+    border-radius: 17px;
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  .dashboard-shortcuts a span {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .dashboard-shortcuts a.active {
+    background: #f8dce9;
+    color: #bd628e;
+  }
+
+  .app {
+    padding-bottom: 130px;
+  }
+}
+/* NEW ORDER PRODUCT SECTION */
+
+.order-items-section {
+  margin-top: 30px;
+  padding: 22px;
+  border: 1px solid #ecd2de;
+  border-radius: 24px;
+  background: #fffafd;
+}
+
+.order-items-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.order-items-heading h2,
+.order-items-heading h3 {
+  margin: 0;
+  text-align: left;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.add-item-button {
+  flex-shrink: 0;
+  min-height: 48px;
+  padding: 11px 17px;
+  border: 1px solid #e2afc7;
+  border-radius: 16px;
+  background: #fff1f7;
+  color: #b95f89;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.order-item-card {
+  margin-bottom: 18px;
+  padding: 20px;
+  border: 1px solid #ead0dc;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 8px 22px rgba(126, 72, 99, 0.06);
+}
+
+.order-item-card:last-child {
+  margin-bottom: 0;
+}
+
+.order-item-card h3 {
+  margin: 0 0 18px;
+  text-align: left;
+  font-size: 19px;
+}
+
+.order-item-card .field-label {
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.order-item-card .field-label:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 560px) {
+  .order-items-section {
+    padding: 18px;
+  }
+
+  .order-items-heading {
+    align-items: flex-start;
+  }
+
+  .order-items-heading h2,
+  .order-items-heading h3 {
+    max-width: 55%;
+    font-size: 22px;
+  }
+
+  .add-item-button {
+    max-width: 145px;
+    padding: 10px 14px;
+    line-height: 1.2;
+  }
+
+  .order-item-card {
+    padding: 18px 16px;
+  }
+}
