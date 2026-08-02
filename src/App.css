@@ -3778,3 +3778,66 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 2.6rem !important;
   }
 }
+/* ===== FINAL DESKTOP SUMMARY NUMBER FIX ===== */
+
+@media (min-width: 901px) {
+  .dashboard-page .summary-grid,
+  .analytics-page .analytics-summary-grid {
+    width: 100% !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+  }
+
+  .dashboard-page .summary-card,
+  .analytics-page .summary-card {
+    min-width: 0 !important;
+    width: 100% !important;
+    padding: 22px 10px !important;
+    overflow: visible !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .dashboard-page .summary-card strong,
+  .analytics-page .summary-card strong {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+
+    font-size: clamp(30px, 3.2vw, 44px) !important;
+    line-height: 1 !important;
+    letter-spacing: -1.5px !important;
+
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+
+  .dashboard-page .summary-card span,
+  .dashboard-page .summary-card small,
+  .analytics-page .summary-card span,
+  .analytics-page .summary-card small {
+    width: 100% !important;
+    text-align: center !important;
+  }
+}
+
+/* Smaller desktop and laptop screens */
+@media (min-width: 901px) and (max-width: 1200px) {
+  .dashboard-page .summary-card strong,
+  .analytics-page .summary-card strong {
+    font-size: 34px !important;
+    letter-spacing: -1px !important;
+  }
+
+  .dashboard-page .summary-card,
+  .analytics-page .summary-card {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}
