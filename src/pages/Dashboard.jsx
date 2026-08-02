@@ -33,7 +33,8 @@ function Dashboard() {
 
       const newestOrders = [...savedOrders].sort(
         (a, b) =>
-          getOrderDate(b) - getOrderDate(a)
+          getOrderTimestamp(b) -
+          getOrderTimestamp(a)
       );
 
       setTotals(savedTotals);
@@ -46,37 +47,62 @@ function Dashboard() {
     }
   }
 
-  function getOrderDate(order) {
-    const value =
+  function getOrderTimestamp(order) {
+    const dateValue =
       order.orderDate || order.createdAt;
 
-    if (!value) {
-      return new Date(0);
-    }
+    if (!dateValue) return 0;
 
-    if (
-      typeof value === "string" &&
-      /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ) {
-      return new Date(`${value}T12:00:00`);
-    }
+    const date = new Date(dateValue);
 
-    return new Date(value);
+    return Number.isNaN(date.getTime())
+      ? 0
+      : date.getTime();
   }
 
+  function getOrderMonth(order) {
+    const dateValue =
+      order.orderDate || order.createdAt;
+
+    if (!dateValue) return "";
+
+    if (
+      typeof dateValue === "string" &&
+      /^\d{4}-\d{2}/.test(dateValue)
+    ) {
+      return dateValue.slice(0, 7);
+    }
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    const year = date.getFullYear();
+
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+
+    return `${year}-${month}`;
+  }
+
+  const currentMonth = useMemo(() => {
+    const today = new Date();
+
+    const year = today.getFullYear();
+
+    const month = String(
+      today.getMonth() + 1
+    ).padStart(2, "0");
+
+    return `${year}-${month}`;
+  }, []);
+
   const monthlyProfit = useMemo(() => {
-    const now = new Date();
-    const month = now.getMonth();
-    const year = now.getFullYear();
-
     return orders.reduce((total, order) => {
-      const orderDate = getOrderDate(order);
-
-      const isCurrentMonth =
-        orderDate.getMonth() === month &&
-        orderDate.getFullYear() === year;
-
-      if (!isCurrentMonth) {
+      if (getOrderMonth(order) !== currentMonth) {
         return total;
       }
 
@@ -85,7 +111,7 @@ function Dashboard() {
         (Number(order.profit) || 0)
       );
     }, 0);
-  }, [orders]);
+  }, [orders, currentMonth]);
 
   const goalPercentage = Math.min(
     100,
@@ -120,12 +146,31 @@ function Dashboard() {
     const productSales = {};
 
     orders.forEach((order) => {
-      order.items?.forEach((item) => {
+      const items = Array.isArray(order.items)
+        ? order.items
+        : [];
+
+      const totalQuantity = items.reduce(
+        (sum, item) =>
+          sum + (Number(item.quantity) || 0),
+        0
+      );
+
+      items.forEach((item) => {
         const productId =
           item.productId ||
           item.productName;
 
         if (!productId) return;
+
+        const itemQuantity =
+          Number(item.quantity) || 0;
+
+        const itemProfit =
+          totalQuantity > 0
+            ? (Number(order.profit) || 0) *
+              (itemQuantity / totalQuantity)
+            : 0;
 
         if (!productSales[productId]) {
           productSales[productId] = {
@@ -136,34 +181,31 @@ function Dashboard() {
             image:
               item.productImage || null,
             quantity: 0,
-            revenue: 0
+            profit: 0
           };
         }
 
         productSales[productId].quantity +=
-          Number(item.quantity) || 0;
+          itemQuantity;
 
-        const totalQuantity = order.items?.reduce(
-  (sum, orderItem) =>
-    sum + (Number(orderItem.quantity) || 0),
-  0
-) || 1;
+        productSales[productId].profit +=
+          itemProfit;
 
-const itemQuantity =
-  Number(item.quantity) || 0;
-
-const itemProfit =
-  (Number(order.profit) || 0) *
-  (itemQuantity / totalQuantity);
-
-productSales[productId].revenue += itemProfit;
+        if (
+          !productSales[productId].image &&
+          item.productImage
+        ) {
+          productSales[productId].image =
+            item.productImage;
+        }
       });
     });
 
     return Object.values(productSales)
       .sort(
         (a, b) =>
-          b.quantity - a.quantity
+          b.quantity - a.quantity ||
+          b.profit - a.profit
       )
       .slice(0, 3);
   }, [orders]);
@@ -327,64 +369,71 @@ productSales[productId].revenue += itemProfit;
             <div className="recent-order-list">
               {orders
                 .slice(0, 4)
-                .map((order) => (
-                  <div
-                    className="recent-order-row"
-                    key={order.id}
-                  >
-                   <div className="order-avatar">
-  {order.items?.[0]?.productImage ? (
-    <img
-      src={order.items[0].productImage}
-      alt={
-        order.items[0].productName ||
-        "Order product"
-      }
-    />
-  ) : (
-    <span>🌷</span>
-  )}
-</div>
+                .map((order) => {
+                  const firstItem =
+                    order.items?.[0];
 
-                    <div className="recent-order-info">
-                      <strong>
-                        {order.customer ||
-                          `Order #${
-                            order.orderNumber ||
-                            "—"
-                          }`}
-                      </strong>
+                  return (
+                    <div
+                      className="recent-order-row"
+                      key={order.id}
+                    >
+                      <div className="order-avatar">
+                        {firstItem?.productImage ? (
+                          <img
+                            src={
+                              firstItem.productImage
+                            }
+                            alt={
+                              firstItem.productName ||
+                              "Order product"
+                            }
+                          />
+                        ) : (
+                          <span>🌷</span>
+                        )}
+                      </div>
 
-                      <span>
-                        {order.platform} ·{" "}
-                        {order.items?.length ||
-                          0}{" "}
-                        product
-                        {order.items?.length ===
-                        1
-                          ? ""
-                          : "s"}
-                      </span>
+                      <div className="recent-order-info">
+                        <strong>
+                          {order.customer ||
+                            `Order #${
+                              order.orderNumber ||
+                              "—"
+                            }`}
+                        </strong>
+
+                        <span>
+                          {order.platform} ·{" "}
+                          {order.items?.length ||
+                            0}{" "}
+                          product
+                          {order.items?.length ===
+                          1
+                            ? ""
+                            : "s"}
+                        </span>
+                      </div>
+
+                      <div className="recent-order-money">
+                        <strong>
+                          $
+                          {Number(
+                            order.revenue
+                          ).toFixed(2)}
+                        </strong>
+
+                        <span>
+                          $
+                          {Number(
+                            order.profit
+                          ).toFixed(2)}{" "}
+                          profit
+                        </span>
+                      </div>
                     </div>
-
-                    <div className="recent-order-money">
-                      <strong>
-                        $
-                        {Number(
-                          order.revenue
-                        ).toFixed(2)}
-                      </strong>
-
-                      <span>
-                        $
-                        {Number(
-                          order.profit
-                        ).toFixed(2)}{" "}
-                        profit
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           )}
         </article>
@@ -451,9 +500,8 @@ productSales[productId].revenue += itemProfit;
 
                     <strong className="top-product-revenue">
                       $
-                      {product.revenue.toFixed(
-                        2
-                      )}
+                      {product.profit.toFixed(2)}
+                      <small> profit</small>
                     </strong>
                   </div>
                 )
