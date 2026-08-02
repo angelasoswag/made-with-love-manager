@@ -39,8 +39,12 @@ function Dashboard() {
 
       const newestOrders = [...savedOrders].sort(
         (a, b) =>
-          new Date(b.createdAt) -
-          new Date(a.createdAt)
+          new Date(
+            b.orderDate || b.createdAt
+          ) -
+          new Date(
+            a.orderDate || a.createdAt
+          )
       );
 
       setTotals(savedTotals);
@@ -57,7 +61,7 @@ function Dashboard() {
   const goalPercentage = Math.min(
     100,
     monthlyGoal > 0
-      ? (totals.revenue / monthlyGoal) * 100
+      ? (totals.profit / monthlyGoal) * 100
       : 0
   );
 
@@ -88,8 +92,7 @@ function Dashboard() {
     orders.forEach((order) => {
       order.items?.forEach((item) => {
         const productId =
-          item.productId ||
-          item.productName;
+          item.productId || item.productName;
 
         if (!productSales[productId]) {
           productSales[productId] = {
@@ -177,7 +180,7 @@ function Dashboard() {
           </strong>
 
           <small>
-            After fees and expenses
+            After expenses
           </small>
         </article>
 
@@ -210,11 +213,11 @@ function Dashboard() {
         <div className="panel-heading">
           <div>
             <p className="section-eyebrow">
-              🐚 Monthly goal
+              🐚 Monthly profit goal
             </p>
 
             <h2>
-              ${totals.revenue.toFixed(2)} of $
+              ${totals.profit.toFixed(2)} of $
               {monthlyGoal.toLocaleString()}
             </h2>
           </div>
@@ -235,11 +238,11 @@ function Dashboard() {
 
         <p className="goal-message">
           {goalPercentage >= 100
-            ? "You reached your goal! 🤍"
+            ? "You reached your profit goal! 🤍"
             : `$${Math.max(
                 0,
-                monthlyGoal - totals.revenue
-              ).toFixed(2)} left to reach your goal.`}
+                monthlyGoal - totals.profit
+              ).toFixed(2)} left to reach your profit goal.`}
         </p>
       </section>
 
@@ -267,8 +270,7 @@ function Dashboard() {
               <span>💌</span>
 
               <p>
-                Your next happy customer is
-                waiting.
+                Your next happy customer is waiting.
               </p>
             </div>
           ) : (
@@ -344,8 +346,8 @@ function Dashboard() {
               <span>🩰</span>
 
               <p>
-                Product sales will appear here
-                after you save orders.
+                Product sales will appear here after
+                you save orders.
               </p>
             </div>
           ) : (
@@ -454,8 +456,7 @@ function Dashboard() {
       </nav>
 
       <p className="dashboard-footer">
-        🌷 Made with love for your small
-        business 🤍
+        🌷 Made with love for your small business 🤍
       </p>
     </main>
   );
