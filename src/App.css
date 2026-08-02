@@ -3286,3 +3286,22 @@ button{
 .order-form .field-label:first-child {
   margin-top: 0;
 }
+/* Fix iPhone/Safari date input */
+input[type="date"] {
+  height: 58px;
+  padding: 0 18px;
+  font-size: 18px;
+  line-height: 58px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.8;
+  cursor: pointer;
+}
