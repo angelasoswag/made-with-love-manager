@@ -10,19 +10,63 @@ function formatMoney(value) {
 }
 
 function formatDate(value) {
-  if (!value) return "No date";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "No date";
+  if (!value) {
+    return "No date recorded";
   }
+
+  const text = String(value).slice(0, 10);
+  const parts = text.split("-").map(Number);
+
+  if (
+    parts.length !== 3 ||
+    !parts[0] ||
+    !parts[1] ||
+    !parts[2]
+  ) {
+    return "No date recorded";
+  }
+
+  const [year, month, day] = parts;
+
+  const date = new Date(
+    year,
+    month - 1,
+    day
+  );
 
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric"
   });
+}
+
+function getOrderTimestamp(order) {
+  if (!order.orderDate) {
+    return 0;
+  }
+
+  const parts = String(order.orderDate)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+
+  if (
+    parts.length !== 3 ||
+    !parts[0] ||
+    !parts[1] ||
+    !parts[2]
+  ) {
+    return 0;
+  }
+
+  const [year, month, day] = parts;
+
+  return new Date(
+    year,
+    month - 1,
+    day
+  ).getTime();
 }
 
 function getUnitsSold(order) {
@@ -36,13 +80,18 @@ function getUnitsSold(order) {
 function OrderHistory() {
   const [orders, setOrders] = useState([]);
   const [searchText, setSearchText] = useState("");
+
   const [platformFilter, setPlatformFilter] =
     useState("All");
-  const [isLoading, setIsLoading] = useState(true);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
   const [errorMessage, setErrorMessage] =
     useState("");
-const [selectedOrder, setSelectedOrder] =
-  useState(null);
+
+  const [selectedOrder, setSelectedOrder] =
+    useState(null);
 
   useEffect(() => {
     loadOrders();
@@ -53,9 +102,13 @@ const [selectedOrder, setSelectedOrder] =
     setErrorMessage("");
 
     try {
-      setOrders(await getOrders());
+      const savedOrders = await getOrders();
+      setOrders(savedOrders);
     } catch (error) {
-      console.error("Could not load orders:", error);
+      console.error(
+        "Could not load orders:",
+        error
+      );
 
       setErrorMessage(
         error.message ||
@@ -70,17 +123,28 @@ const [selectedOrder, setSelectedOrder] =
     const confirmed = window.confirm(
       `Delete order #${
         order.orderNumber || "—"
-      } for ${order.customer}?\n\nThis cannot be undone.`
+      } for ${
+        order.customer || "this customer"
+      }?\n\nThis cannot be undone.`
     );
 
     if (!confirmed) return;
 
     try {
       await deleteOrder(order.id);
+
+      if (selectedOrder?.id === order.id) {
+        setSelectedOrder(null);
+      }
+
       await loadOrders();
+
       alert("💌 Order deleted.");
     } catch (error) {
-      console.error("Could not delete order:", error);
+      console.error(
+        "Could not delete order:",
+        error
+      );
 
       alert(
         `The order could not be deleted.\n\n${
@@ -91,12 +155,18 @@ const [selectedOrder, setSelectedOrder] =
   }
 
   const filteredOrders = useMemo(() => {
-    const search = searchText.trim().toLowerCase();
+    const search =
+      searchText.trim().toLowerCase();
 
     return orders
       .filter((order) => {
-        const productNames = (order.items || [])
-          .map((item) => item.productName || "")
+        const productNames = (
+          order.items || []
+        )
+          .map(
+            (item) =>
+              item.productName || ""
+          )
           .join(" ")
           .toLowerCase();
 
@@ -114,28 +184,33 @@ const [selectedOrder, setSelectedOrder] =
           platformFilter === "All" ||
           order.platform === platformFilter;
 
-        return matchesSearch && matchesPlatform;
+        return (
+          matchesSearch &&
+          matchesPlatform
+        );
       })
       .sort(
         (a, b) =>
-          new Date(
-            b.createdAt || b.created_at || 0
-          ) -
-          new Date(
-            a.createdAt || a.created_at || 0
-          )
+          getOrderTimestamp(b) -
+          getOrderTimestamp(a)
       );
-  }, [orders, searchText, platformFilter]);
+  }, [
+    orders,
+    searchText,
+    platformFilter
+  ]);
 
   const totalRevenue = filteredOrders.reduce(
     (total, order) =>
-      total + (Number(order.revenue) || 0),
+      total +
+      (Number(order.revenue) || 0),
     0
   );
 
   const totalProfit = filteredOrders.reduce(
     (total, order) =>
-      total + (Number(order.profit) || 0),
+      total +
+      (Number(order.profit) || 0),
     0
   );
 
@@ -152,17 +227,23 @@ const [selectedOrder, setSelectedOrder] =
       <section className="order-history-summary">
         <article>
           <span>🛍️ Orders</span>
-          <strong>{filteredOrders.length}</strong>
+          <strong>
+            {filteredOrders.length}
+          </strong>
         </article>
 
         <article>
           <span>💰 Revenue</span>
-          <strong>{formatMoney(totalRevenue)}</strong>
+          <strong>
+            {formatMoney(totalRevenue)}
+          </strong>
         </article>
 
         <article>
           <span>🌷 Profit</span>
-          <strong>{formatMoney(totalProfit)}</strong>
+          <strong>
+            {formatMoney(totalProfit)}
+          </strong>
         </article>
       </section>
 
@@ -174,7 +255,9 @@ const [selectedOrder, setSelectedOrder] =
             type="search"
             value={searchText}
             onChange={(event) =>
-              setSearchText(event.target.value)
+              setSearchText(
+                event.target.value
+              )
             }
             placeholder="Search customer, order number, or product..."
           />
@@ -183,14 +266,27 @@ const [selectedOrder, setSelectedOrder] =
         <select
           value={platformFilter}
           onChange={(event) =>
-            setPlatformFilter(event.target.value)
+            setPlatformFilter(
+              event.target.value
+            )
           }
           aria-label="Filter orders by platform"
         >
-          <option value="All">All platforms</option>
-          <option value="Etsy">Etsy</option>
-          <option value="Depop">Depop</option>
-          <option value="Mercari">Mercari</option>
+          <option value="All">
+            All platforms
+          </option>
+
+          <option value="Etsy">
+            Etsy
+          </option>
+
+          <option value="Depop">
+            Depop
+          </option>
+
+          <option value="Mercari">
+            Mercari
+          </option>
         </select>
       </section>
 
@@ -202,6 +298,7 @@ const [selectedOrder, setSelectedOrder] =
       ) : errorMessage ? (
         <section className="dashboard-empty">
           <span>💌</span>
+
           <p>{errorMessage}</p>
 
           <button
@@ -225,83 +322,123 @@ const [selectedOrder, setSelectedOrder] =
       ) : (
         <section className="order-history-list">
           {filteredOrders.map((order) => {
-            const items = Array.isArray(order.items)
+            const items = Array.isArray(
+              order.items
+            )
               ? order.items
               : [];
 
-            const unitsSold = getUnitsSold(order);
+            const unitsSold =
+              getUnitsSold(order);
 
             return (
               <article
-  className="order-history-card"
-  key={order.id}
-  onClick={() => setSelectedOrder(order)}
->
+                className="order-history-card"
+                key={order.id}
+                onClick={() =>
+                  setSelectedOrder(order)
+                }
+              >
                 <div className="order-history-card-top">
                   <div className="order-history-main">
                     <span className="order-number">
-                      Order #{order.orderNumber || "—"}
+                      Order #
+                      {order.orderNumber ||
+                        "—"}
                     </span>
 
-                    <h2>{order.customer}</h2>
+                    <h2>
+                      {order.customer ||
+                        "No customer name"}
+                    </h2>
 
                     <p>
-                      {order.platform} ·{" "}
+                      {order.platform ||
+                        "Unknown platform"}{" "}
+                      ·{" "}
                       {formatDate(
-                        order.createdAt ||
-                          order.created_at
+                        order.orderDate
                       )}
                     </p>
                   </div>
 
                   <div className="order-history-money">
                     <strong>
-                      {formatMoney(order.revenue)}
+                      {formatMoney(
+                        order.revenue
+                      )}
                     </strong>
 
                     <span>
-                      {formatMoney(order.profit)} profit
+                      {formatMoney(
+                        order.profit
+                      )}{" "}
+                      profit
                     </span>
                   </div>
                 </div>
 
                 <div className="order-history-items">
-                  {items.map((item, index) => (
-                    <div
-                      className="order-history-item"
-                      key={`${order.id}-${index}`}
-                    >
-                      <div className="order-history-item-info">
-                        <strong>
-                          {item.productName ||
-                            "Unnamed product"}
+                  {items.map(
+                    (item, index) => (
+                      <div
+                        className="order-history-item"
+                        key={`${order.id}-${index}`}
+                      >
+                        {item.productImage ? (
+                          <img
+                            className="order-history-item-image"
+                            src={
+                              item.productImage
+                            }
+                            alt={
+                              item.productName ||
+                              "Order product"
+                            }
+                          />
+                        ) : null}
+
+                        <div className="order-history-item-info">
+                          <strong>
+                            {item.productName ||
+                              "Unnamed product"}
+                          </strong>
+
+                          <span>
+                            Qty{" "}
+                            {Number(
+                              item.quantity
+                            ) || 0}
+                          </span>
+                        </div>
+
+                        <strong className="order-history-item-total">
+                          {formatMoney(
+                            item.lineRevenue
+                          )}
                         </strong>
-
-                        <span>
-                          Qty {Number(item.quantity) || 0}
-                        </span>
                       </div>
-
-                      <strong className="order-history-item-total">
-                        {formatMoney(item.lineRevenue)}
-                      </strong>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
 
                 <div className="order-history-card-footer">
                   <span>
                     {unitsSold} item
-                    {unitsSold === 1 ? "" : "s"}
+                    {unitsSold === 1
+                      ? ""
+                      : "s"}
                   </span>
 
                   <button
                     type="button"
                     className="delete-order-button"
                     onClick={(event) => {
-  event.stopPropagation();
-  handleDeleteOrder(order);
-}}
+                      event.stopPropagation();
+                      handleDeleteOrder(
+                        order
+                      );
+                    }}
                   >
                     Delete Order
                   </button>
@@ -311,116 +448,138 @@ const [selectedOrder, setSelectedOrder] =
           })}
         </section>
       )}
-{selectedOrder && (
-  <div
-    className="receipt-overlay"
-    onClick={() => setSelectedOrder(null)}
-  >
-    <section
-      className="receipt-card"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <button
-        type="button"
-        className="receipt-close"
-        onClick={() => setSelectedOrder(null)}
-      >
-        ×
-      </button>
 
-      <div className="receipt-header">
-        <p>🌷 Made with Love, Maria</p>
-        <h2>Order Receipt</h2>
-        <span>
-          Order #{selectedOrder.orderNumber || "—"}
-        </span>
-      </div>
-
-      <div className="receipt-meta">
-        <div>
-          <span>Customer</span>
-          <strong>{selectedOrder.customer}</strong>
-        </div>
-
-        <div>
-          <span>Date</span>
-          <strong>
-            {formatDate(
-              selectedOrder.createdAt ||
-                selectedOrder.created_at
-            )}
-          </strong>
-        </div>
-
-        <div>
-          <span>Platform</span>
-          <strong>{selectedOrder.platform}</strong>
-        </div>
-      </div>
-
-      <div className="receipt-items">
-        {(selectedOrder.items || []).map(
-          (item, index) => (
-            <div
-              className="receipt-item"
-              key={`${selectedOrder.id}-${index}`}
+      {selectedOrder && (
+        <div
+          className="receipt-overlay"
+          onClick={() =>
+            setSelectedOrder(null)
+          }
+        >
+          <section
+            className="receipt-card"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <button
+              type="button"
+              className="receipt-close"
+              onClick={() =>
+                setSelectedOrder(null)
+              }
+              aria-label="Close receipt"
             >
-              <div>
-                <strong>
-                  {item.productName ||
-                    "Unnamed product"}
-                </strong>
+              ×
+            </button>
 
-                <span>
-                  {Number(item.quantity) || 0} ×{" "}
-                  {formatMoney(item.priceAtSale)}
-                </span>
+            <div className="receipt-header">
+              <p>
+                🌷 Made with Love, Maria
+              </p>
+
+              <h2>Order Receipt</h2>
+
+              <span>
+                Order #
+                {selectedOrder.orderNumber ||
+                  "—"}
+              </span>
+            </div>
+
+            <div className="receipt-meta">
+              <div>
+                <span>Customer</span>
+
+                <strong>
+                  {selectedOrder.customer ||
+                    "No customer name"}
+                </strong>
               </div>
 
-              <strong>
-                {formatMoney(item.lineRevenue)}
-              </strong>
+              <div>
+                <span>Date ordered</span>
+
+                <strong>
+                  {formatDate(
+                    selectedOrder.orderDate
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Platform</span>
+
+                <strong>
+                  {selectedOrder.platform ||
+                    "Unknown"}
+                </strong>
+              </div>
             </div>
-          )
-        )}
-      </div>
 
-      <div className="receipt-totals">
-        <div>
-          <span>Revenue</span>
-          <strong>
-            {formatMoney(selectedOrder.revenue)}
-          </strong>
+            <div className="receipt-items">
+              {(selectedOrder.items || []).map(
+                (item, index) => (
+                  <div
+                    className="receipt-item"
+                    key={`${selectedOrder.id}-${index}`}
+                  >
+                    <div>
+                      <strong>
+                        {item.productName ||
+                          "Unnamed product"}
+                      </strong>
+
+                      <span>
+                        {Number(
+                          item.quantity
+                        ) || 0}{" "}
+                        ×{" "}
+                        {formatMoney(
+                          item.priceAtSale
+                        )}
+                      </span>
+                    </div>
+
+                    <strong>
+                      {formatMoney(
+                        item.lineRevenue
+                      )}
+                    </strong>
+                  </div>
+                )
+              )}
+            </div>
+
+            <div className="receipt-totals">
+              <div>
+                <span>Revenue</span>
+
+                <strong>
+                  {formatMoney(
+                    selectedOrder.revenue
+                  )}
+                </strong>
+              </div>
+
+              <div className="receipt-profit">
+                <span>Profit</span>
+
+                <strong>
+                  {formatMoney(
+                    selectedOrder.profit
+                  )}
+                </strong>
+              </div>
+            </div>
+
+            <p className="receipt-footer">
+              Thank you for supporting my
+              small business 💌
+            </p>
+          </section>
         </div>
-
-        <div>
-          <span>Platform fees</span>
-          <strong>
-            −{formatMoney(selectedOrder.fees)}
-          </strong>
-        </div>
-
-        <div>
-          <span>Discount</span>
-          <strong>
-            −{formatMoney(selectedOrder.discount)}
-          </strong>
-        </div>
-
-        <div className="receipt-profit">
-          <span>Profit</span>
-          <strong>
-            {formatMoney(selectedOrder.profit)}
-          </strong>
-        </div>
-      </div>
-
-      <p className="receipt-footer">
-        Thank you for supporting my small business 💌
-      </p>
-    </section>
-  </div>
-)}
+      )}
     </main>
   );
 }
