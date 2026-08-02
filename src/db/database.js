@@ -139,36 +139,32 @@ async function changeOrderStock(items, direction) {
 export async function getProducts() {
   const user = await getSignedInUser();
 
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("products")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("user_id", user.id)
     .order("name");
 
-  if (error) throw error;
-
-  return data ?? [];
-}
-
-export async function getActiveProducts() {
-  const products = await getProducts();
-
-  return products.filter(
-    (product) => product.active !== false
+  console.log("SIGNED-IN USER ID:", user.id);
+  console.log("PRODUCT QUERY DATA:", data);
+  console.log("PRODUCT QUERY COUNT:", count);
+  console.log("PRODUCT QUERY ERROR:", error);
+  console.log(
+    "SUPABASE URL:",
+    import.meta.env.VITE_SUPABASE_URL
   );
-}
 
-export async function getProduct(productId) {
-  const user = await getSignedInUser();
+  if (error) {
+    throw new Error(
+      `Supabase product error: ${error.message}`
+    );
+  }
 
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .eq("id", productId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error(
+      `Supabase returned 0 products for user ${user.id}.`
+    );
+  }
 
   return data;
 }
