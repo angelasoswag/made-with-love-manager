@@ -4,7 +4,6 @@ import {
   useRef,
   useState
 } from "react";
-import { Link } from "react-router-dom";
 
 import {
   addProduct,
@@ -33,8 +32,9 @@ const CATEGORIES = [
   "Other"
 ];
 
-function imageUrl(image) {
+function getImageUrl(image) {
   if (!image) return "";
+
   return typeof image === "string"
     ? image
     : URL.createObjectURL(image);
@@ -42,6 +42,7 @@ function imageUrl(image) {
 
 function ProductCatalog() {
   const formRef = useRef(null);
+  const restockRef = useRef(null);
 
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -84,7 +85,9 @@ function ProductCatalog() {
 
     orders.forEach((order) => {
       const orderDate =
-        order.createdAt || order.created_at;
+        order.orderDate ||
+        order.createdAt ||
+        order.created_at;
 
       (order.items || []).forEach((item) => {
         if (!item.productId) return;
@@ -105,9 +108,11 @@ function ProductCatalog() {
           unitsSold:
             current.unitsSold +
             (Number(item.quantity) || 0),
+
           revenue:
             current.revenue +
             (Number(item.lineRevenue) || 0),
+
           lastSoldAt: isNewer
             ? orderDate
             : current.lastSoldAt
@@ -116,13 +121,17 @@ function ProductCatalog() {
     });
 
     return products.map((product) => {
-      const productSales = sales.get(product.id) || {
-        unitsSold: 0,
-        revenue: 0,
-        lastSoldAt: null
-      };
+      const productSales =
+        sales.get(product.id) || {
+          unitsSold: 0,
+          revenue: 0,
+          lastSoldAt: null
+        };
 
       const stock = Number(product.stock) || 0;
+
+      const threshold =
+        Number(product.low_stock_threshold) || 2;
 
       return {
         ...product,
@@ -131,22 +140,43 @@ function ProductCatalog() {
         salesRevenue: productSales.revenue,
         lastSoldAt: productSales.lastSoldAt,
         isLowStock:
-          product.active !== false && stock <= 2
+          product.active !== false &&
+          stock <= threshold
       };
     });
   }, [products, orders]);
 
+  const activeProducts = useMemo(
+    () =>
+      productInsights.filter(
+        (product) => product.active !== false
+      ),
+    [productInsights]
+  );
+
+  const lowStockProducts = useMemo(
+    () =>
+      activeProducts
+        .filter((product) => product.isLowStock)
+        .sort((a, b) => a.stock - b.stock),
+    [activeProducts]
+  );
+
   const displayedProducts = useMemo(() => {
-    const search = searchText.trim().toLowerCase();
+    const search =
+      searchText.trim().toLowerCase();
 
     return productInsights.filter((product) => {
       const matchesStatus =
-        showArchived || product.active !== false;
+        showArchived ||
+        product.active !== false;
 
       const matchesSearch =
         !search ||
-        product.name.toLowerCase().includes(search) ||
-        product.category
+        product.name
+          .toLowerCase()
+          .includes(search) ||
+        String(product.category || "")
           .toLowerCase()
           .includes(search);
 
@@ -171,18 +201,27 @@ function ProductCatalog() {
     [productInsights]
   );
 
-  const activeProducts = productInsights.filter(
-    (product) => product.active !== false
-  );
-
   const totalStock = activeProducts.reduce(
-    (total, product) => total + product.stock,
+    (total, product) =>
+      total + product.stock,
     0
   );
 
-  const lowStockCount = activeProducts.filter(
-    (product) => product.isLowStock
-  ).length;
+  function scrollToRestock() {
+    restockRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+
+  function scrollToForm() {
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }, 100);
+  }
 
   function updateForm(field, value) {
     setForm((current) => ({
@@ -205,15 +244,6 @@ function ProductCatalog() {
     setShowForm(false);
   }
 
-  function scrollToForm() {
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-    }, 100);
-  }
-
   function startAddingProduct() {
     clearPreview();
     setForm(EMPTY_FORM);
@@ -230,13 +260,17 @@ function ProductCatalog() {
 
     setForm({
       name: product.name,
-      category: product.category || "Sticker",
+      category:
+        product.category || "Sticker",
       price: String(product.price ?? ""),
       stock: String(product.stock ?? ""),
       image: product.image || null
     });
 
-    setImagePreview(imageUrl(product.image));
+    setImagePreview(
+      getImageUrl(product.image)
+    );
+
     setShowForm(true);
     scrollToForm();
   }
@@ -252,7 +286,9 @@ function ProductCatalog() {
     }
 
     if (file.size > 8 * 1024 * 1024) {
-      alert("Please choose an image smaller than 8 MB.");
+      alert(
+        "Please choose an image smaller than 8 MB."
+      );
       return;
     }
 
@@ -263,7 +299,9 @@ function ProductCatalog() {
       image: file
     }));
 
-    setImagePreview(URL.createObjectURL(file));
+    setImagePreview(
+      URL.createObjectURL(file)
+    );
   }
 
   function removeImage() {
@@ -301,7 +339,9 @@ function ProductCatalog() {
       !Number.isInteger(stock) ||
       stock < 0
     ) {
-      alert("Enter a valid whole-number stock amount.");
+      alert(
+        "Enter a valid whole-number stock amount."
+      );
       return;
     }
 
@@ -316,7 +356,10 @@ function ProductCatalog() {
 
     try {
       if (editingId) {
-        await updateProduct(editingId, productData);
+        await updateProduct(
+          editingId,
+          productData
+        );
       } else {
         await addProduct({
           ...productData,
@@ -368,6 +411,49 @@ function ProductCatalog() {
     }
   }
 
+  async function restockProduct(product) {
+    const amount = window.prompt(
+      `How many ${product.name} should be added?`,
+      "10"
+    );
+
+    if (amount === null) return;
+
+    const quantity = Number(amount);
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0
+    ) {
+      alert(
+        "Enter a whole number greater than 0."
+      );
+      return;
+    }
+
+    try {
+      await updateProduct(product.id, {
+        stock:
+          (Number(product.stock) || 0) +
+          quantity
+      });
+
+      await loadCatalogData();
+
+      alert(
+        `📦 Added ${quantity} to ${product.name}.`
+      );
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        `The product could not be restocked.\n\n${
+          error.message || "Unknown error"
+        }`
+      );
+    }
+  }
+
   function formatLastSold(date) {
     if (!date) return "Never";
 
@@ -398,7 +484,7 @@ function ProductCatalog() {
         <div className="podium-image">
           {product.image ? (
             <img
-              src={imageUrl(product.image)}
+              src={getImageUrl(product.image)}
               alt={product.name}
             />
           ) : (
@@ -408,7 +494,9 @@ function ProductCatalog() {
 
         <h3>{product.name}</h3>
 
-        <strong>{product.unitsSold} sold</strong>
+        <strong>
+          {product.unitsSold} sold
+        </strong>
 
         <small>
           ${product.salesRevenue.toFixed(2)} revenue
@@ -420,61 +508,18 @@ function ProductCatalog() {
       </article>
     );
   }
-async function restockProduct(product) {
-  const amount = window.prompt(
-    `How many ${product.name} should be added?`,
-    "10"
-  );
 
-  if (amount === null) return;
-
-  const quantity = Number(amount);
-
-  if (
-    !Number.isInteger(quantity) ||
-    quantity <= 0
-  ) {
-    alert("Enter a whole number greater than 0.");
-    return;
-  }
-
-  try {
-    await updateProduct(product.id, {
-      stock:
-        (Number(product.stock) || 0) +
-        quantity
-    });
-
-    await loadCatalogData();
-
-    alert(
-      `📦 Added ${quantity} to ${product.name}.`
-    );
-  } catch (error) {
-    console.error(
-      "Could not restock product:",
-      error
-    );
-
-    alert(
-      `The product could not be restocked.\n\n${
-        error.message || "Unknown error"
-      }`
-    );
-  }
-}
   return (
     <main className="app catalog-page">
       <header className="page-header catalog-page-header">
-    
-
         <div className="catalog-heading-row">
           <div>
             <h1>Product Catalog</h1>
 
-<p className="page-description">
-  Manage products, inventory, and performance.
-</p>
+            <p className="page-description">
+              Manage products, inventory, and
+              performance.
+            </p>
           </div>
 
           <button
@@ -487,7 +532,6 @@ async function restockProduct(product) {
         </div>
       </header>
 
-
       <section className="catalog-summary">
         <article>
           <span>🌷 Active Products</span>
@@ -499,9 +543,23 @@ async function restockProduct(product) {
           <strong>{totalStock}</strong>
         </article>
 
-        <article>
+        <article
+          className="low-stock-summary"
+          onClick={scrollToRestock}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" ||
+              event.key === " "
+            ) {
+              scrollToRestock();
+            }
+          }}
+        >
           <span>⚠️ Low Stock</span>
-          <strong>{lowStockCount}</strong>
+          <strong>{lowStockProducts.length}</strong>
+          <small>Tap to view</small>
         </article>
       </section>
 
@@ -513,9 +571,7 @@ async function restockProduct(product) {
 
           <h2>🏆 Best Sellers</h2>
 
-          <p>
-            Ranked by total units sold.
-          </p>
+          <p>Ranked by total units sold.</p>
         </div>
 
         {bestSellers.length ? (
@@ -541,6 +597,7 @@ async function restockProduct(product) {
         ) : (
           <div className="best-seller-empty">
             <span>🩰</span>
+
             <p>
               Best sellers will appear after you
               save orders.
@@ -739,7 +796,9 @@ async function restockProduct(product) {
             type="checkbox"
             checked={showArchived}
             onChange={(event) =>
-              setShowArchived(event.target.checked)
+              setShowArchived(
+                event.target.checked
+              )
             }
           />
 
@@ -757,214 +816,202 @@ async function restockProduct(product) {
         </section>
       ) : (
         <section className="product-grid">
-          {displayedProducts.map((product) => {
-            const productImage = imageUrl(
-              product.image
-            );
+          {displayedProducts.map((product) => (
+            <article
+              className={`product-card ${
+                product.active === false
+                  ? "archived-product"
+                  : ""
+              }`}
+              key={product.id}
+            >
+              <div className="product-image-box">
+                {product.image ? (
+                  <img
+                    src={getImageUrl(product.image)}
+                    alt={`${product.name} mockup`}
+                  />
+                ) : (
+                  <div className="no-product-image">
+                    <span>💌</span>
+                    <small>No mockup</small>
+                  </div>
+                )}
 
-            return (
-              <article
-                className={`product-card ${
-                  product.active === false
-                    ? "archived-product"
-                    : ""
-                }`}
-                key={product.id}
-              >
-                <div className="product-image-box">
-                  {productImage ? (
-                    <img
-                      src={productImage}
-                      alt={`${product.name} mockup`}
-                    />
-                  ) : (
-                    <div className="no-product-image">
-                      <span>💌</span>
-                      <small>No mockup</small>
-                    </div>
-                  )}
-
-                  {product.active === false && (
-                    <span className="archived-badge">
-                      Archived
-                    </span>
-                  )}
-                </div>
-
-                <div className="product-card-content">
-                  <span className="product-category">
-                    {product.category}
+                {product.active === false && (
+                  <span className="archived-badge">
+                    Archived
                   </span>
+                )}
+              </div>
 
-                  <h2>{product.name}</h2>
+              <div className="product-card-content">
+                <span className="product-category">
+                  {product.category}
+                </span>
 
-                  <strong className="product-price">
-                    $
-                    {Number(product.price).toFixed(
-                      2
-                    )}
-                  </strong>
+                <h2>{product.name}</h2>
 
-                  <div className="product-insights">
-                    <div>
-                      <span>Stock</span>
-                      <strong>{product.stock}</strong>
-                    </div>
+                <strong className="product-price">
+                  $
+                  {Number(product.price).toFixed(2)}
+                </strong>
 
-                    <div>
-                      <span>Sold</span>
-                      <strong>
-                        {product.unitsSold}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span>Revenue</span>
-                      <strong>
-                        $
-                        {product.salesRevenue.toFixed(
-                          2
-                        )}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span>Last sold</span>
-                      <strong>
-                        {formatLastSold(
-                          product.lastSoldAt
-                        )}
-                      </strong>
-                    </div>
+                <div className="product-insights">
+                  <div>
+                    <span>Stock</span>
+                    <strong>{product.stock}</strong>
                   </div>
 
-                  {product.isLowStock && (
-                    <div className="low-stock-warning">
-                      ⚠️ Low stock — {product.stock}{" "}
-                      left
-                    </div>
-                  )}
+                  <div>
+                    <span>Sold</span>
+                    <strong>
+                      {product.unitsSold}
+                    </strong>
+                  </div>
 
-                  <div className="product-card-actions">
-    <button
-  type="button"
-  className="restock-product-button"
-  onClick={() => restockProduct(product)}
->
-  📦 Restock
-</button>
-                    <button
-                      type="button"
-                      className="edit-product-button"
-                      onClick={() =>
-                        startEditingProduct(product)
-                      }
-                    >
-                      ✏️ Edit
-                    </button>
+                  <div>
+                    <span>Revenue</span>
+                    <strong>
+                      $
+                      {product.salesRevenue.toFixed(
+                        2
+                      )}
+                    </strong>
+                  </div>
 
-                    <button
-                      type="button"
-                      className="archive-product-button"
-                      onClick={() =>
-                        toggleStatus(product)
-                      }
-                    >
-                      {product.active === false
-                        ? "♻️ Restore"
-                        : "📦 Archive"}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="delete-product-button"
-                      onClick={() =>
-                        removeProduct(product)
-                      }
-                    >
-                      🗑️ Delete
-                    </button>
+                  <div>
+                    <span>Last sold</span>
+                    <strong>
+                      {formatLastSold(
+                        product.lastSoldAt
+                      )}
+                    </strong>
                   </div>
                 </div>
-              </article>
-            );
-          })}
+
+                {product.isLowStock && (
+                  <div className="low-stock-warning">
+                    ⚠️ Low stock — {product.stock} left
+                  </div>
+                )}
+
+                <div className="product-card-actions">
+                  <button
+                    type="button"
+                    className="restock-product-button"
+                    onClick={() =>
+                      restockProduct(product)
+                    }
+                  >
+                    📦 Restock
+                  </button>
+
+                  <button
+                    type="button"
+                    className="edit-product-button"
+                    onClick={() =>
+                      startEditingProduct(product)
+                    }
+                  >
+                    ✏️ Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    className="archive-product-button"
+                    onClick={() =>
+                      toggleStatus(product)
+                    }
+                  >
+                    {product.active === false
+                      ? "♻️ Restore"
+                      : "📦 Archive"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="delete-product-button"
+                    onClick={() =>
+                      removeProduct(product)
+                    }
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
         </section>
       )}
-<section className="restock-section">
-  <div className="panel-heading">
-    <div>
-      <p className="section-eyebrow">
-        📦 Inventory
-      </p>
 
-      <h2>Restock Needed</h2>
-    </div>
-  </div>
+      <section
+        ref={restockRef}
+        className="restock-section"
+      >
+        <div className="panel-heading">
+          <div>
+            <p className="section-eyebrow">
+              📦 Inventory
+            </p>
 
-  {products.filter(
-    (product) =>
-      product.active !== false &&
-      (Number(product.stock) || 0) <=
-        (Number(product.low_stock_threshold) || 2)
-  ).length === 0 ? (
-    <div className="dashboard-empty">
-      <span>🌷</span>
-      <p>Everything is currently stocked!</p>
-    </div>
-  ) : (
-    <div className="restock-list">
-      {[...products]
-        .filter(
-          (product) =>
-            product.active !== false &&
-            (Number(product.stock) || 0) <=
-              (Number(
-                product.low_stock_threshold
-              ) || 2)
-        )
-        .sort(
-          (a, b) =>
-            (Number(a.stock) || 0) -
-            (Number(b.stock) || 0)
-        )
-        .map((product) => (
-          <div
-            className="restock-row"
-            key={product.id}
-          >
-            <div className="restock-image">
-              {product.image ? (
-                <img
-                  src={product.image}
-                  alt={product.name}
-                />
-              ) : (
-                <span>🩰</span>
-              )}
-            </div>
-
-            <div className="restock-info">
-              <strong>{product.name}</strong>
-
-              <span>
-                {Number(product.stock) || 0} left in
-                stock
-              </span>
-            </div>
-
-            <button
-              type="button"
-              className="restock-product-button"
-              onClick={() => restockProduct(product)}
-            >
-              📦 Restock
-            </button>
+            <h2>Restock Needed</h2>
           </div>
-        ))}
-    </div>
-  )}
-</section>
+
+          <strong>
+            {lowStockProducts.length}
+          </strong>
+        </div>
+
+        {lowStockProducts.length === 0 ? (
+          <div className="dashboard-empty">
+            <span>🌷</span>
+            <p>
+              Everything is currently stocked!
+            </p>
+          </div>
+        ) : (
+          <div className="restock-list">
+            {lowStockProducts.map((product) => (
+              <div
+                className="restock-row"
+                key={product.id}
+              >
+                <div className="restock-image">
+                  {product.image ? (
+                    <img
+                      src={getImageUrl(
+                        product.image
+                      )}
+                      alt={product.name}
+                    />
+                  ) : (
+                    <span>🩰</span>
+                  )}
+                </div>
+
+                <div className="restock-info">
+                  <strong>{product.name}</strong>
+
+                  <span>
+                    {product.stock} left in stock
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className="restock-product-button"
+                  onClick={() =>
+                    restockProduct(product)
+                  }
+                >
+                  📦 Restock
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
