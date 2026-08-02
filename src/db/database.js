@@ -17,35 +17,104 @@ async function getSignedInUser() {
   return user;
 }
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+const PRODUCT_IMAGE_BUCKET = "product-images";
 
-    reader.onload = () => resolve(reader.result);
-
-    reader.onerror = () =>
-      reject(
-        new Error(
-          "The product photo could not be read."
-        )
-      );
-
-    reader.readAsDataURL(file);
-  });
+function sanitizeFileName(fileName) {
+  return String(fileName || "product-image")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-");
 }
 
-async function prepareProductImage(image) {
+function getStoragePathFromPublicUrl(imageUrl) {
+  if (
+    !imageUrl ||
+    typeof imageUrl !== "string" ||
+    !imageUrl.includes(
+      `/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/`
+    )
+  ) {
+    return null;
+  }
+
+  const marker =
+    `/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/`;
+
+  return decodeURIComponent(
+    imageUrl.split(marker)[1]?.split("?")[0] || ""
+  );
+}
+
+async function uploadProductImage(
+  image,
+  userId,
+  productId
+) {
   if (!image) return null;
 
   if (typeof image === "string") {
     return image;
   }
 
-  if (image instanceof File || image instanceof Blob) {
-    return fileToDataUrl(image);
+  if (!(image instanceof File || image instanceof Blob)) {
+    return null;
   }
 
-  return null;
+  const originalName =
+    image instanceof File
+      ? image.name
+      : `product-${productId}.png`;
+
+  const extension =
+    originalName.includes(".")
+      ? originalName.split(".").pop()
+      : "png";
+
+  const safeName = sanitizeFileName(
+    originalName.replace(/\.[^/.]+$/, "")
+  );
+
+  const filePath = `${userId}/${productId}-${Date.now()}-${safeName}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(PRODUCT_IMAGE_BUCKET)
+    .upload(filePath, image, {
+      contentType: image.type || "image/png",
+      cacheControl: "3600",
+      upsert: false
+    });
+
+  if (uploadError) {
+    throw new Error(
+      `The product image could not be uploaded: ${uploadError.message}`
+    );
+  }
+
+  const {
+    data: { publicUrl }
+  } = supabase.storage
+    .from(PRODUCT_IMAGE_BUCKET)
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+}
+
+async function deleteStoredProductImage(imageUrl) {
+  const filePath =
+    getStoragePathFromPublicUrl(imageUrl);
+
+  if (!filePath) return;
+
+  const { error } = await supabase.storage
+    .from(PRODUCT_IMAGE_BUCKET)
+    .remove([filePath]);
+
+  if (error) {
+    console.warn(
+      "The old product image could not be removed:",
+      error
+    );
+  }
 }
 
 function mapOrder(order) {
@@ -139,40 +208,36 @@ async function changeOrderStock(items, direction) {
 export async function getProducts() {
   const user = await getSignedInUser();
 
-  const { data, error, count } = await supabase
+  const { data, error } = await supabase
     .from("products")
-    .select("*", { count: "exact" })
+    .select(`
+      id,
+      name,
+      category,
+      price,
+      stock,
+      active
+    `)
     .eq("user_id", user.id)
     .order("name");
 
-  console.log("SIGNED-IN USER ID:", user.id);
-  console.log("PRODUCT QUERY DATA:", data);
-  console.log("PRODUCT QUERY COUNT:", count);
-  console.log("PRODUCT QUERY ERROR:", error);
-  console.log(
-    "SUPABASE URL:",
-    import.meta.env.VITE_SUPABASE_URL
-  );
+  if (error) throw error;
 
-  if (error) {
-    throw new Error(
-      `Supabase product error: ${error.message}`
-    );
-  }
-
-  if (!data || data.length === 0) {
-    throw new Error(
-      `Supabase returned 0 products for user ${user.id}.`
-    );
-  }
-
-  return data;
+  return data ?? [];
 }
 
 export async function addProduct(product) {
   const user = await getSignedInUser();
+  const productId = crypto.randomUUID();
+
+  const imageUrl = await uploadProductImage(
+    product.image,
+    user.id,
+    productId
+  );
 
   const newProduct = {
+    id: productId,
     user_id: user.id,
     name: String(product.name || "").trim(),
     category: String(
@@ -184,9 +249,7 @@ export async function addProduct(product) {
       Number(product.stock) || 0
     ),
     low_stock_threshold: 2,
-    image: await prepareProductImage(
-      product.image
-    ),
+    image: imageUrl,
     active: product.active !== false
   };
 
@@ -196,7 +259,10 @@ export async function addProduct(product) {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    await deleteStoredProductImage(imageUrl);
+    throw error;
+  }
 
   return data;
 }
@@ -207,17 +273,43 @@ export async function updateProduct(
 ) {
   const user = await getSignedInUser();
 
+  const { data: currentProduct, error: loadError } =
+    await supabase
+      .from("products")
+      .select("id, image")
+      .eq("id", productId)
+      .eq("user_id", user.id)
+      .single();
+
+  if (loadError) throw loadError;
+
   const prepared = { ...updates };
+  let newImageUrl;
+  let shouldDeleteOldImage = false;
 
   if (updates.image !== undefined) {
-    prepared.image = await prepareProductImage(
-      updates.image
-    );
+    if (
+      updates.image instanceof File ||
+      updates.image instanceof Blob
+    ) {
+      newImageUrl = await uploadProductImage(
+        updates.image,
+        user.id,
+        productId
+      );
+
+      prepared.image = newImageUrl;
+      shouldDeleteOldImage = true;
+    } else if (updates.image === null) {
+      prepared.image = null;
+      shouldDeleteOldImage = true;
+    } else {
+      prepared.image = updates.image;
+    }
   }
 
   if (updates.price !== undefined) {
-    prepared.price =
-      Number(updates.price) || 0;
+    prepared.price = Number(updates.price) || 0;
   }
 
   if (updates.stock !== undefined) {
@@ -241,7 +333,23 @@ export async function updateProduct(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (newImageUrl) {
+      await deleteStoredProductImage(newImageUrl);
+    }
+
+    throw error;
+  }
+
+  if (
+    shouldDeleteOldImage &&
+    currentProduct.image &&
+    currentProduct.image !== prepared.image
+  ) {
+    await deleteStoredProductImage(
+      currentProduct.image
+    );
+  }
 
   return data;
 }
@@ -261,6 +369,16 @@ export function reactivateProduct(productId) {
 export async function deleteProduct(productId) {
   const user = await getSignedInUser();
 
+  const { data: product, error: loadError } =
+    await supabase
+      .from("products")
+      .select("id, image")
+      .eq("id", productId)
+      .eq("user_id", user.id)
+      .single();
+
+  if (loadError) throw loadError;
+
   const { error } = await supabase
     .from("products")
     .delete()
@@ -268,6 +386,8 @@ export async function deleteProduct(productId) {
     .eq("user_id", user.id);
 
   if (error) throw error;
+
+  await deleteStoredProductImage(product.image);
 }
 
 /* ---------- ORDERS ---------- */
