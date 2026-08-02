@@ -4211,3 +4211,38 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 12px !important;
   }
 }
+/* ===== Smaller images in Restock Needed only ===== */
+
+.restock-row {
+  align-items: center;
+}
+
+.restock-image {
+  width: 60px !important;
+  height: 60px !important;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.restock-image img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  object-fit: contain !important;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .restock-image {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .restock-image img {
+    max-width: 36px !important;
+    max-height: 36px !important;
+  }
+}
