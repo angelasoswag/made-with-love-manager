@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
   addOrder,
@@ -15,11 +15,29 @@ function createBlankItem() {
   };
 }
 
+function getToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getProductImage(image) {
+  if (!image) return "";
+
+  if (typeof image === "string") {
+    return image;
+  }
+
+  return URL.createObjectURL(image);
+}
+
 function NewOrder() {
   const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+
+  const [orderDate, setOrderDate] = useState(getToday());
+  const [deductInventory, setDeductInventory] =
+    useState(true);
 
   const [customer, setCustomer] = useState("");
   const [platform, setPlatform] = useState("Etsy");
@@ -35,17 +53,28 @@ function NewOrder() {
   }, []);
 
   async function loadData() {
-    const [savedProducts, savedOrders] = await Promise.all([
-      getActiveProducts(),
-      getOrders()
-    ]);
+    try {
+      const [savedProducts, savedOrders] =
+        await Promise.all([
+          getActiveProducts(),
+          getOrders()
+        ]);
 
-    savedProducts.sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+      savedProducts.sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
 
-    setProducts(savedProducts);
-    setOrders(savedOrders);
+      setProducts(savedProducts);
+      setOrders(savedOrders);
+    } catch (error) {
+      console.error("Could not load order data:", error);
+
+      alert(
+        `The order form could not be loaded.\n\n${
+          error.message || "Unknown error"
+        }`
+      );
+    }
   }
 
   const calculatedItems = useMemo(() => {
@@ -80,9 +109,7 @@ function NewOrder() {
   const discountAmount = Number(discount) || 0;
 
   const orderProfit =
-    orderRevenue -
-    feeAmount -
-    discountAmount;
+    orderRevenue - feeAmount - discountAmount;
 
   function updateItem(rowId, field, value) {
     setOrderItems((currentItems) =>
@@ -116,76 +143,93 @@ function NewOrder() {
     });
   }
 
-async function saveOrder() {
-  if (!customer.trim()) {
-    alert("Enter the customer name.");
-    return;
-  }
+  async function saveOrder() {
+    if (!orderDate) {
+      alert("Choose the date ordered.");
+      return;
+    }
 
-  const validItems = calculatedItems.filter(
-    (item) => item.product
-  );
+    if (!customer.trim()) {
+      alert("Enter the customer name.");
+      return;
+    }
 
-  if (validItems.length === 0) {
-    alert("Add at least one product.");
-    return;
-  }
-
-  if (validItems.length !== calculatedItems.length) {
-    alert("Choose a product for every product row.");
-    return;
-  }
-
-  try {
-    await addOrder({
-      orderNumber: orders.length + 1,
-      customer: customer.trim(),
-      platform,
-      revenue: orderRevenue,
-      fees: feeAmount,
-      discount: discountAmount,
-      items: validItems.map((item) => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        productImage:
-          typeof item.product.image === "string"
-            ? item.product.image
-            : null,
-        quantity: item.quantity,
-        priceAtSale: Number(item.product.price),
-        lineRevenue: item.lineRevenue
-      }))
-    });
-
-    alert("💌 Order saved!");
-
-    navigate("/");
-  } catch (error) {
-    console.error("Could not save order:", error);
-
-    alert(
-      `The order could not be saved.\n\n${
-        error.message || "Unknown error"
-      }`
+    const validItems = calculatedItems.filter(
+      (item) => item.product
     );
+
+    if (validItems.length === 0) {
+      alert("Add at least one product.");
+      return;
+    }
+
+    if (validItems.length !== calculatedItems.length) {
+      alert("Choose a product for every product row.");
+      return;
+    }
+
+    try {
+      await addOrder({
+        orderNumber: orders.length + 1,
+        orderDate,
+        deductInventory,
+        customer: customer.trim(),
+        platform,
+        revenue: orderRevenue,
+        fees: feeAmount,
+        discount: discountAmount,
+        items: validItems.map((item) => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          productImage:
+            typeof item.product.image === "string"
+              ? item.product.image
+              : null,
+          quantity: item.quantity,
+          priceAtSale: Number(item.product.price),
+          lineRevenue: item.lineRevenue
+        }))
+      });
+
+      alert("💌 Order saved!");
+
+      navigate("/");
+    } catch (error) {
+      console.error("Could not save order:", error);
+
+      alert(
+        `The order could not be saved.\n\n${
+          error.message || "Unknown error"
+        }`
+      );
+    }
   }
-}
 
   return (
     <div className="app">
       <header className="page-header">
-      
-
         <div>
-     <h1>New Order</h1>
+          <h1>New Order</h1>
 
-<p className="page-description">
-  Create a new customer order.
-</p>
+          <p className="page-description">
+            Create a new customer order.
+          </p>
         </div>
       </header>
 
       <section className="order-form">
+        <label className="field-label">
+          Date ordered
+
+          <input
+            type="date"
+            value={orderDate}
+            onChange={(event) =>
+              setOrderDate(event.target.value)
+            }
+          />
+        </label>
+
         <label className="field-label">
           Customer name
 
@@ -213,6 +257,25 @@ async function saveOrder() {
             <option value="Mercari">Mercari</option>
           </select>
         </label>
+
+        <label className="archive-toggle">
+          <input
+            type="checkbox"
+            checked={deductInventory}
+            onChange={(event) =>
+              setDeductInventory(event.target.checked)
+            }
+          />
+
+          Deduct products from inventory
+        </label>
+
+        {!deductInventory && (
+          <div className="empty-catalog">
+            Inventory quantities will not change when
+            this order is saved.
+          </div>
+        )}
 
         <div className="items-heading">
           <h3>Products in this order</h3>
@@ -288,6 +351,7 @@ async function saveOrder() {
                 <input
                   type="number"
                   min="1"
+                  step="1"
                   value={item.quantity}
                   onChange={(event) =>
                     updateItem(
@@ -303,7 +367,7 @@ async function saveOrder() {
                 <div className="product-preview">
                   {item.product.image ? (
                     <img
-                      src={URL.createObjectURL(
+                      src={getProductImage(
                         item.product.image
                       )}
                       alt={`${item.product.name} mockup`}
@@ -318,7 +382,8 @@ async function saveOrder() {
                     <strong>{item.product.name}</strong>
 
                     <p>
-                      ${Number(
+                      $
+                      {Number(
                         item.product.price
                       ).toFixed(2)}{" "}
                       each
@@ -327,6 +392,11 @@ async function saveOrder() {
                     <p>
                       Line total: $
                       {item.lineRevenue.toFixed(2)}
+                    </p>
+
+                    <p>
+                      Current stock:{" "}
+                      {Number(item.product.stock) || 0}
                     </p>
                   </div>
                 </div>
@@ -378,7 +448,18 @@ async function saveOrder() {
 
           <div>
             <span>Discount</span>
-            <strong>${discountAmount.toFixed(2)}</strong>
+            <strong>
+              ${discountAmount.toFixed(2)}
+            </strong>
+          </div>
+
+          <div>
+            <span>Inventory</span>
+            <strong>
+              {deductInventory
+                ? "Will be deducted"
+                : "Will not change"}
+            </strong>
           </div>
 
           <div className="profit-row">

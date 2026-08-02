@@ -11,7 +11,10 @@ async function getUser() {
   } = await supabase.auth.getUser();
 
   if (error) throw error;
-  if (!user) throw new Error("You must be signed in.");
+
+  if (!user) {
+    throw new Error("You must be signed in.");
+  }
 
   return user;
 }
@@ -20,6 +23,11 @@ function mapOrder(order) {
   return {
     id: order.id,
     orderNumber: order.order_number,
+    orderDate:
+      order.order_date ||
+      order.created_at?.slice(0, 10),
+    deductInventory:
+      order.deduct_inventory !== false,
     customer: order.customer,
     platform: order.platform,
     items: order.items || [],
@@ -28,7 +36,8 @@ function mapOrder(order) {
     discount: Number(order.discount) || 0,
     profit: Number(order.profit) || 0,
     createdAt: order.created_at,
-    updatedAt: order.updated_at || order.created_at
+    updatedAt:
+      order.updated_at || order.created_at
   };
 }
 
@@ -41,7 +50,8 @@ function mapExpense(expense) {
     description: expense.description || "",
     amount: Number(expense.amount) || 0,
     createdAt: expense.created_at,
-    updatedAt: expense.updated_at || expense.created_at
+    updatedAt:
+      expense.updated_at || expense.created_at
   };
 }
 
@@ -53,7 +63,10 @@ function cleanFileName(name) {
 
 async function uploadImage(file, userId, productId) {
   if (!file) return null;
-  if (typeof file === "string") return file;
+
+  if (typeof file === "string") {
+    return file;
+  }
 
   const extension =
     file.name?.split(".").pop() || "png";
@@ -84,21 +97,18 @@ async function uploadImage(file, userId, productId) {
 }
 
 function getImagePath(url) {
+  const marker =
+    `/storage/v1/object/public/${IMAGE_BUCKET}/`;
+
   if (
     typeof url !== "string" ||
-    !url.includes(
-      `/storage/v1/object/public/${IMAGE_BUCKET}/`
-    )
+    !url.includes(marker)
   ) {
     return null;
   }
 
   return decodeURIComponent(
-    url
-      .split(
-        `/storage/v1/object/public/${IMAGE_BUCKET}/`
-      )[1]
-      ?.split("?")[0] || ""
+    url.split(marker)[1]?.split("?")[0] || ""
   );
 }
 
@@ -131,7 +141,7 @@ export async function getProducts() {
       cost,
       stock,
       low_stock_threshold,
-image,
+      image,
       active,
       created_at
     `)
@@ -183,7 +193,10 @@ export async function addProduct(product) {
     category: product.category || "Sticker",
     price: Number(product.price) || 0,
     cost: Number(product.cost) || 0,
-    stock: Math.max(0, Number(product.stock) || 0),
+    stock: Math.max(
+      0,
+      Number(product.stock) || 0
+    ),
     low_stock_threshold: 2,
     active: product.active !== false,
     image
@@ -209,13 +222,15 @@ export async function updateProduct(
 ) {
   const user = await getUser();
 
-  const { data: oldProduct, error: loadError } =
-    await supabase
-      .from("products")
-      .select("image")
-      .eq("id", productId)
-      .eq("user_id", user.id)
-      .single();
+  const {
+    data: oldProduct,
+    error: loadError
+  } = await supabase
+    .from("products")
+    .select("image")
+    .eq("id", productId)
+    .eq("user_id", user.id)
+    .single();
 
   if (loadError) throw loadError;
 
@@ -243,11 +258,13 @@ export async function updateProduct(
   }
 
   if (updates.price !== undefined) {
-    prepared.price = Number(updates.price) || 0;
+    prepared.price =
+      Number(updates.price) || 0;
   }
 
   if (updates.cost !== undefined) {
-    prepared.cost = Number(updates.cost) || 0;
+    prepared.cost =
+      Number(updates.cost) || 0;
   }
 
   if (updates.stock !== undefined) {
@@ -272,7 +289,10 @@ export async function updateProduct(
     .single();
 
   if (error) {
-    if (newImage) await removeImage(newImage);
+    if (newImage) {
+      await removeImage(newImage);
+    }
+
     throw error;
   }
 
@@ -301,13 +321,15 @@ export function reactivateProduct(productId) {
 export async function deleteProduct(productId) {
   const user = await getUser();
 
-  const { data: product, error: loadError } =
-    await supabase
-      .from("products")
-      .select("image")
-      .eq("id", productId)
-      .eq("user_id", user.id)
-      .single();
+  const {
+    data: product,
+    error: loadError
+  } = await supabase
+    .from("products")
+    .select("image")
+    .eq("id", productId)
+    .eq("user_id", user.id)
+    .single();
 
   if (loadError) throw loadError;
 
@@ -336,12 +358,16 @@ async function changeStock(items, direction) {
 
     quantities.set(
       item.productId,
-      oldQuantity + (Number(item.quantity) || 0)
+      oldQuantity +
+        (Number(item.quantity) || 0)
     );
   }
 
   for (const [productId, quantity] of quantities) {
-    const { data: product, error } = await supabase
+    const {
+      data: product,
+      error
+    } = await supabase
       .from("products")
       .select("name, stock")
       .eq("id", productId)
@@ -351,6 +377,7 @@ async function changeStock(items, direction) {
     if (error) throw error;
 
     const stock = Number(product.stock) || 0;
+
     const newStock =
       stock + direction * quantity;
 
@@ -360,11 +387,12 @@ async function changeStock(items, direction) {
       );
     }
 
-    const { error: updateError } = await supabase
-      .from("products")
-      .update({ stock: newStock })
-      .eq("id", productId)
-      .eq("user_id", user.id);
+    const { error: updateError } =
+      await supabase
+        .from("products")
+        .update({ stock: newStock })
+        .eq("id", productId)
+        .eq("user_id", user.id);
 
     if (updateError) throw updateError;
   }
@@ -379,6 +407,9 @@ export async function getOrders() {
     .from("orders")
     .select("*")
     .eq("user_id", user.id)
+    .order("order_date", {
+      ascending: false
+    })
     .order("created_at", {
       ascending: false
     });
@@ -406,39 +437,58 @@ export async function getOrder(orderId) {
 export async function addOrder(order) {
   const user = await getUser();
 
-  const items = (order.items || []).map((item) => ({
-    productId: item.productId,
-    productName: String(
-      item.productName || ""
-    ).trim(),
-    productImage: item.productImage || null,
-    quantity: Math.max(
-      1,
-      Number(item.quantity) || 1
-    ),
-    priceAtSale:
-      Number(item.priceAtSale) || 0,
-    lineRevenue:
-      Number(item.lineRevenue) || 0
-  }));
+  const items = (order.items || []).map(
+    (item) => ({
+      productId: item.productId,
+      productName: String(
+        item.productName || ""
+      ).trim(),
+      productImage:
+        item.productImage || null,
+      quantity: Math.max(
+        1,
+        Number(item.quantity) || 1
+      ),
+      priceAtSale:
+        Number(item.priceAtSale) || 0,
+      lineRevenue:
+        Number(item.lineRevenue) || 0
+    })
+  );
 
   const revenue = Number(order.revenue) || 0;
   const fees = Number(order.fees) || 0;
-  const discount = Number(order.discount) || 0;
+  const discount =
+    Number(order.discount) || 0;
+
+  const shouldDeductInventory =
+    order.deductInventory !== false;
 
   const newOrder = {
     user_id: user.id,
-    order_number: order.orderNumber || null,
-    customer: String(order.customer || "").trim(),
-    platform: order.platform || "Etsy",
+    order_number:
+      order.orderNumber || null,
+    order_date:
+      order.orderDate ||
+      new Date().toISOString().slice(0, 10),
+    deduct_inventory:
+      shouldDeductInventory,
+    customer: String(
+      order.customer || ""
+    ).trim(),
+    platform:
+      order.platform || "Etsy",
     items,
     revenue,
     fees,
     discount,
-    profit: revenue - fees - discount
+    profit:
+      revenue - fees - discount
   };
 
-  await changeStock(items, -1);
+  if (shouldDeductInventory) {
+    await changeStock(items, -1);
+  }
 
   const { data, error } = await supabase
     .from("orders")
@@ -447,7 +497,10 @@ export async function addOrder(order) {
     .single();
 
   if (error) {
-    await changeStock(items, 1);
+    if (shouldDeductInventory) {
+      await changeStock(items, 1);
+    }
+
     throw error;
   }
 
@@ -462,8 +515,53 @@ export async function updateOrder(
   const prepared = { ...updates };
 
   if (updates.orderNumber !== undefined) {
-    prepared.order_number = updates.orderNumber;
+    prepared.order_number =
+      updates.orderNumber;
+
     delete prepared.orderNumber;
+  }
+
+  if (updates.orderDate !== undefined) {
+    prepared.order_date =
+      updates.orderDate;
+
+    delete prepared.orderDate;
+  }
+
+  if (
+    updates.deductInventory !== undefined
+  ) {
+    prepared.deduct_inventory =
+      updates.deductInventory;
+
+    delete prepared.deductInventory;
+  }
+
+  if (
+    updates.revenue !== undefined ||
+    updates.fees !== undefined ||
+    updates.discount !== undefined
+  ) {
+    const currentOrder =
+      await getOrder(orderId);
+
+    const revenue =
+      updates.revenue !== undefined
+        ? Number(updates.revenue) || 0
+        : currentOrder.revenue;
+
+    const fees =
+      updates.fees !== undefined
+        ? Number(updates.fees) || 0
+        : currentOrder.fees;
+
+    const discount =
+      updates.discount !== undefined
+        ? Number(updates.discount) || 0
+        : currentOrder.discount;
+
+    prepared.profit =
+      revenue - fees - discount;
   }
 
   delete prepared.id;
@@ -487,7 +585,9 @@ export async function deleteOrder(orderId) {
   const user = await getUser();
   const order = await getOrder(orderId);
 
-  await changeStock(order.items, 1);
+  if (order.deductInventory !== false) {
+    await changeStock(order.items, 1);
+  }
 
   const { error } = await supabase
     .from("orders")
@@ -496,7 +596,10 @@ export async function deleteOrder(orderId) {
     .eq("user_id", user.id);
 
   if (error) {
-    await changeStock(order.items, -1);
+    if (order.deductInventory !== false) {
+      await changeStock(order.items, -1);
+    }
+
     throw error;
   }
 }
@@ -527,12 +630,16 @@ export async function addExpense(expense) {
     date:
       expense.date ||
       new Date().toISOString().slice(0, 10),
-    vendor: String(expense.vendor || "").trim(),
-    category: expense.category || "Other",
+    vendor: String(
+      expense.vendor || ""
+    ).trim(),
+    category:
+      expense.category || "Other",
     description: String(
       expense.description || ""
     ).trim(),
-    amount: Number(expense.amount) || 0
+    amount:
+      Number(expense.amount) || 0
   };
 
   const { data, error } = await supabase
@@ -554,7 +661,8 @@ export async function updateExpense(
   const prepared = { ...updates };
 
   if (updates.amount !== undefined) {
-    prepared.amount = Number(updates.amount) || 0;
+    prepared.amount =
+      Number(updates.amount) || 0;
   }
 
   delete prepared.id;
@@ -575,7 +683,9 @@ export async function updateExpense(
   return mapExpense(data);
 }
 
-export async function deleteExpense(expenseId) {
+export async function deleteExpense(
+  expenseId
+) {
   const user = await getUser();
 
   const { error } = await supabase
@@ -604,21 +714,32 @@ export async function getDashboardTotals() {
       0
     );
 
-  const revenue = total(orders, "revenue");
-  const fees = total(orders, "fees");
-  const discounts = total(orders, "discount");
-  const expenseTotal = total(expenses, "amount");
+  const revenue =
+    total(orders, "revenue");
+
+  const fees =
+    total(orders, "fees");
+
+  const discounts =
+    total(orders, "discount");
+
+  const expenseTotal =
+    total(expenses, "amount");
 
   return {
     totalOrders: orders.length,
     totalProducts: products.filter(
-      (product) => product.active !== false
+      (product) =>
+        product.active !== false
     ).length,
     revenue,
     platformFees: fees,
     discounts,
     expenses: expenseTotal,
     profit:
-      revenue - fees - discounts - expenseTotal
+      revenue -
+      fees -
+      discounts -
+      expenseTotal
   };
 }
