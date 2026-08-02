@@ -3258,3 +3258,31 @@ button{
   height: 18px !important;
   flex-shrink: 0 !important;
 }
+/* Orders search bar */
+.search-container {
+  position: relative;
+}
+
+.search-container svg,
+.search-container .search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.search-container input,
+.search-container select {
+  width: 100%;
+  padding-left: 48px;
+  box-sizing: border-box;
+}
+/* Add more space above Revenue and Profit fields */
+.order-form .field-label {
+  margin-top: 18px;
+}
+
+.order-form .field-label:first-child {
+  margin-top: 0;
+}
