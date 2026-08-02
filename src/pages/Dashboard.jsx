@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 
 import {
   getDashboardTotals,
-  getOrders,
-  getProducts
+  getOrders
 } from "../db/database";
 
 function Dashboard() {
@@ -17,7 +16,6 @@ function Dashboard() {
   });
 
   const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState([]);
 
   const monthlyGoal = 5000;
 
@@ -27,29 +25,19 @@ function Dashboard() {
 
   async function loadDashboard() {
     try {
-      const [
-        savedTotals,
-        savedOrders,
-        savedProducts
-      ] = await Promise.all([
-        getDashboardTotals(),
-        getOrders(),
-        getProducts()
-      ]);
+      const [savedTotals, savedOrders] =
+        await Promise.all([
+          getDashboardTotals(),
+          getOrders()
+        ]);
 
       const newestOrders = [...savedOrders].sort(
         (a, b) =>
-          new Date(
-            b.orderDate || b.createdAt
-          ) -
-          new Date(
-            a.orderDate || a.createdAt
-          )
+          getOrderDate(b) - getOrderDate(a)
       );
 
       setTotals(savedTotals);
       setOrders(newestOrders);
-      setProducts(savedProducts);
     } catch (error) {
       console.error(
         "Could not load dashboard:",
@@ -58,10 +46,51 @@ function Dashboard() {
     }
   }
 
+  function getOrderDate(order) {
+    const value =
+      order.orderDate || order.createdAt;
+
+    if (!value) {
+      return new Date(0);
+    }
+
+    if (
+      typeof value === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ) {
+      return new Date(`${value}T12:00:00`);
+    }
+
+    return new Date(value);
+  }
+
+  const monthlyProfit = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+
+    return orders.reduce((total, order) => {
+      const orderDate = getOrderDate(order);
+
+      const isCurrentMonth =
+        orderDate.getMonth() === month &&
+        orderDate.getFullYear() === year;
+
+      if (!isCurrentMonth) {
+        return total;
+      }
+
+      return (
+        total +
+        (Number(order.profit) || 0)
+      );
+    }, 0);
+  }, [orders]);
+
   const goalPercentage = Math.min(
     100,
     monthlyGoal > 0
-      ? (totals.profit / monthlyGoal) * 100
+      ? (monthlyProfit / monthlyGoal) * 100
       : 0
   );
 
@@ -73,7 +102,8 @@ function Dashboard() {
     };
 
     orders.forEach((order) => {
-      const platform = order.platform;
+      const platform =
+        order.platform || "Other";
 
       if (!(platform in totalsByPlatform)) {
         totalsByPlatform[platform] = 0;
@@ -92,13 +122,19 @@ function Dashboard() {
     orders.forEach((order) => {
       order.items?.forEach((item) => {
         const productId =
-          item.productId || item.productName;
+          item.productId ||
+          item.productName;
+
+        if (!productId) return;
 
         if (!productSales[productId]) {
           productSales[productId] = {
             id: productId,
-            name: item.productName,
-            image: item.productImage || null,
+            name:
+              item.productName ||
+              "Unnamed product",
+            image:
+              item.productImage || null,
             quantity: 0,
             revenue: 0
           };
@@ -113,19 +149,12 @@ function Dashboard() {
     });
 
     return Object.values(productSales)
-      .sort((a, b) => b.quantity - a.quantity)
+      .sort(
+        (a, b) =>
+          b.quantity - a.quantity
+      )
       .slice(0, 3);
   }, [orders]);
-
-  function getImageUrl(image) {
-    if (!image) return "";
-
-    if (typeof image === "string") {
-      return image;
-    }
-
-    return URL.createObjectURL(image);
-  }
 
   return (
     <main className="app dashboard-page">
@@ -164,7 +193,10 @@ function Dashboard() {
           <span>💌 Revenue</span>
 
           <strong>
-            ${totals.revenue.toFixed(2)}
+            $
+            {Number(
+              totals.revenue
+            ).toFixed(2)}
           </strong>
 
           <small>
@@ -176,11 +208,14 @@ function Dashboard() {
           <span>🤍 Profit</span>
 
           <strong>
-            ${totals.profit.toFixed(2)}
+            $
+            {Number(
+              totals.profit
+            ).toFixed(2)}
           </strong>
 
           <small>
-            After expenses
+            After business expenses
           </small>
         </article>
 
@@ -217,7 +252,7 @@ function Dashboard() {
             </p>
 
             <h2>
-              ${totals.profit.toFixed(2)} of $
+              ${monthlyProfit.toFixed(2)} of $
               {monthlyGoal.toLocaleString()}
             </h2>
           </div>
@@ -238,11 +273,13 @@ function Dashboard() {
 
         <p className="goal-message">
           {goalPercentage >= 100
-            ? "You reached your profit goal! 🤍"
+            ? "You reached your monthly profit goal! 🤍"
             : `$${Math.max(
                 0,
-                monthlyGoal - totals.profit
-              ).toFixed(2)} left to reach your profit goal.`}
+                monthlyGoal - monthlyProfit
+              ).toFixed(
+                2
+              )} left to reach your monthly profit goal.`}
         </p>
       </section>
 
@@ -270,55 +307,62 @@ function Dashboard() {
               <span>💌</span>
 
               <p>
-                Your next happy customer is waiting.
+                Your next happy customer is
+                waiting.
               </p>
             </div>
           ) : (
             <div className="recent-order-list">
-              {orders.slice(0, 4).map((order) => (
-                <div
-                  className="recent-order-row"
-                  key={order.id}
-                >
-                  <div className="order-avatar">
-                    🌷
+              {orders
+                .slice(0, 4)
+                .map((order) => (
+                  <div
+                    className="recent-order-row"
+                    key={order.id}
+                  >
+                    <div className="order-avatar">
+                      🌷
+                    </div>
+
+                    <div className="recent-order-info">
+                      <strong>
+                        {order.customer ||
+                          `Order #${
+                            order.orderNumber ||
+                            "—"
+                          }`}
+                      </strong>
+
+                      <span>
+                        {order.platform} ·{" "}
+                        {order.items?.length ||
+                          0}{" "}
+                        product
+                        {order.items?.length ===
+                        1
+                          ? ""
+                          : "s"}
+                      </span>
+                    </div>
+
+                    <div className="recent-order-money">
+                      <strong>
+                        $
+                        {Number(
+                          order.revenue
+                        ).toFixed(2)}
+                      </strong>
+
+                      <span>
+                        $
+                        {Number(
+                          order.profit
+                        ).toFixed(2)}{" "}
+                        profit
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="recent-order-info">
-                    <strong>
-                      {order.customer ||
-                        `Order #${
-                          order.orderNumber || "—"
-                        }`}
-                    </strong>
-
-                    <span>
-                      {order.platform} ·{" "}
-                      {order.items?.length || 0} product
-                      {order.items?.length === 1
-                        ? ""
-                        : "s"}
-                    </span>
-                  </div>
-
-                  <div className="recent-order-money">
-                    <strong>
-                      $
-                      {Number(
-                        order.revenue
-                      ).toFixed(2)}
-                    </strong>
-
-                    <span>
-                      $
-                      {Number(
-                        order.profit
-                      ).toFixed(2)}{" "}
-                      profit
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </article>
@@ -346,8 +390,8 @@ function Dashboard() {
               <span>🩰</span>
 
               <p>
-                Product sales will appear here after
-                you save orders.
+                Product sales will appear here
+                after you save orders.
               </p>
             </div>
           ) : (
@@ -365,9 +409,7 @@ function Dashboard() {
                     <div className="top-product-image">
                       {product.image ? (
                         <img
-                          src={getImageUrl(
-                            product.image
-                          )}
+                          src={product.image}
                           alt={`${product.name} mockup`}
                         />
                       ) : (
@@ -387,7 +429,9 @@ function Dashboard() {
 
                     <strong className="top-product-revenue">
                       $
-                      {product.revenue.toFixed(2)}
+                      {product.revenue.toFixed(
+                        2
+                      )}
                     </strong>
                   </div>
                 )
@@ -416,47 +460,29 @@ function Dashboard() {
         </div>
 
         <div className="platform-grid">
-          {Object.entries(platformTotals).map(
-            ([platform, revenue]) => (
-              <div
-                className="platform-card"
-                key={platform}
-              >
-                <span>{platform}</span>
+          {Object.entries(
+            platformTotals
+          ).map(([platform, revenue]) => (
+            <div
+              className="platform-card"
+              key={platform}
+            >
+              <span>{platform}</span>
 
-                <strong>
-                  ${revenue.toFixed(2)}
-                </strong>
-              </div>
-            )
-          )}
+              <strong>
+                $
+                {Number(
+                  revenue
+                ).toFixed(2)}
+              </strong>
+            </div>
+          ))}
         </div>
       </section>
 
-      <nav className="dashboard-shortcuts">
-        <Link to="/new-order">
-          🌷
-          <span>New Order</span>
-        </Link>
-
-        <Link to="/products">
-          🩰
-          <span>Products</span>
-        </Link>
-
-        <Link to="/expenses">
-          💌
-          <span>Expenses</span>
-        </Link>
-
-        <Link to="/analytics">
-          🧚
-          <span>Analytics</span>
-        </Link>
-      </nav>
-
       <p className="dashboard-footer">
-        🌷 Made with love for your small business 🤍
+        🌷 Made with love for your small
+        business 🤍
       </p>
     </main>
   );
