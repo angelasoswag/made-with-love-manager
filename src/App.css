@@ -3596,3 +3596,185 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     letter-spacing: -1px !important;
   }
 }
+/* ===== Better looking date picker ===== */
+
+.expense-form input[type="date"] {
+  width: 100%;
+  height: 68px;
+
+  border: 2px solid #f3dce8;
+  border-radius: 22px;
+
+  background: #fff;
+
+  padding: 0 22px;
+
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #b45d89;
+
+  text-align: center;
+
+  transition: all 0.2s ease;
+}
+
+.expense-form input[type="date"]:hover {
+  border-color: #e8b7cf;
+}
+
+.expense-form input[type="date"]:focus {
+  outline: none;
+  border-color: #d978a8;
+  box-shadow: 0 0 0 5px rgba(217, 120, 168, 0.15);
+}
+
+/* Calendar icon */
+.expense-form input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.8;
+  transform: scale(1.3);
+  padding-right: 4px;
+}
+
+/* Hide placeholder until a date is selected */
+.expense-form input[type="date"]:invalid {
+  color: #c9b6c1;
+}
+/* ===== CLEAN ANALYTICS PROFIT BREAKDOWN ===== */
+
+.money-breakdown {
+  padding: 28px 22px !important;
+}
+
+.money-breakdown .panel-heading {
+  margin-bottom: 22px !important;
+}
+
+.money-breakdown-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 18px !important;
+
+  padding: 18px 0 !important;
+  border-bottom: 1px solid #efdce6 !important;
+}
+
+.money-breakdown-row span {
+  min-width: 0 !important;
+  text-align: left !important;
+
+  font-size: 17px !important;
+  line-height: 1.3 !important;
+  font-weight: 500 !important;
+
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+.money-breakdown-row strong {
+  min-width: max-content !important;
+  text-align: right !important;
+
+  font-size: 19px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+/* Make recorded profit readable, not oversized */
+.money-breakdown-row.subtotal {
+  background: transparent !important;
+}
+
+.money-breakdown-row.subtotal span {
+  font-weight: 600 !important;
+}
+
+/* Expense amount */
+.money-breakdown-row.deduction strong {
+  color: #ad5f83 !important;
+}
+
+/* Final net profit */
+.money-breakdown-row.net-total {
+  margin-top: 14px !important;
+  padding: 20px 18px !important;
+
+  border: 0 !important;
+  border-radius: 22px !important;
+  background: #f5dfe9 !important;
+}
+
+.money-breakdown-row.net-total span,
+.money-breakdown-row.net-total strong {
+  color: #985271 !important;
+  font-weight: 700 !important;
+}
+
+/* Mobile tightening */
+@media (max-width: 500px) {
+  .money-breakdown {
+    padding: 26px 18px !important;
+  }
+
+  .money-breakdown-row {
+    gap: 12px !important;
+    padding: 17px 0 !important;
+  }
+
+  .money-breakdown-row span {
+    font-size: 16px !important;
+  }
+
+  .money-breakdown-row strong {
+    font-size: 18px !important;
+  }
+}
+/* ===== Dashboard summary card fix ===== */
+
+.summary-grid {
+  grid-template-columns: repeat(4, minmax(180px, 1fr)) !important;
+  gap: 22px !important;
+}
+
+.summary-card {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  padding: 22px 16px !important;
+}
+
+.summary-card strong {
+  width: 100% !important;
+  display: block !important;
+  text-align: center !important;
+
+  font-size: 3rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: -2px !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+.summary-card span,
+.summary-card small {
+  text-align: center !important;
+  width: 100% !important;
+}
+
+@media (max-width: 900px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .summary-card strong {
+    font-size: 2.6rem !important;
+  }
+}
