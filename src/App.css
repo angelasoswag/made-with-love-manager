@@ -3394,3 +3394,48 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     white-space: nowrap !important;
   }
 }
+/* ===== ORDER HISTORY IMAGE FIX ===== */
+
+.order-history-item-image,
+.order-history-item img,
+.receipt-item img,
+.receipt-item-image,
+.receipt-card img {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  max-width: 52px !important;
+  max-height: 52px !important;
+
+  object-fit: cover !important;
+  border-radius: 12px !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+}
+
+/* Keep receipt rows aligned */
+.receipt-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.receipt-item > div {
+  flex: 1 !important;
+}
+
+/* Keep order history rows aligned */
+.order-history-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.order-history-item-info {
+  flex: 1 !important;
+}
+
+.order-history-item-total {
+  margin-left: auto !important;
+}
