@@ -5,7 +5,6 @@ import {
   useState
 } from "react";
 import { Link } from "react-router-dom";
-import { migrateProductImages } from "../migrateProductImages";
 
 import {
   addProduct,
@@ -487,12 +486,7 @@ async function restockProduct(product) {
           </button>
         </div>
       </header>
-<button
-  onClick={migrateProductImages}
-  style={{ marginTop: 12 }}
->
-  Migrate Photos
-</button>
+
 
       <section className="catalog-summary">
         <article>
