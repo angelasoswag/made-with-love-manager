@@ -3196,3 +3196,65 @@ button{
 .product-preview div:last-child {
   flex: 1;
 }
+/* ---------- NEW ORDER APPEARANCE FIXES ---------- */
+
+/* Keep product mockup small */
+.order-item-card .product-preview {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  margin-top: 14px !important;
+  padding: 14px !important;
+}
+
+.order-item-card .product-preview img {
+  width: 90px !important;
+  height: 90px !important;
+  min-width: 90px !important;
+  max-width: 90px !important;
+  min-height: 90px !important;
+  max-height: 90px !important;
+  object-fit: contain !important;
+  border-radius: 12px !important;
+  background: white !important;
+  flex-shrink: 0 !important;
+}
+
+/* Keep revenue and profit inputs neat */
+.order-form .field-label input[type="number"] {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Make the revenue/profit summary cleaner */
+.order-summary {
+  display: grid !important;
+  gap: 10px !important;
+  margin-top: 18px !important;
+}
+
+.order-summary > div {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.order-summary .profit-row {
+  padding-top: 12px !important;
+  margin-top: 4px !important;
+  border-top: 1px solid rgba(80, 40, 60, 0.15) !important;
+}
+
+/* Keep the inventory checkbox compact */
+.order-form .archive-toggle {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.order-form .archive-toggle input {
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0 !important;
+}
