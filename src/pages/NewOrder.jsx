@@ -41,8 +41,9 @@ function NewOrder() {
 
   const [customer, setCustomer] = useState("");
   const [platform, setPlatform] = useState("Etsy");
-  const [fees, setFees] = useState("");
-  const [discount, setDiscount] = useState("");
+
+  const [revenue, setRevenue] = useState("");
+  const [profit, setProfit] = useState("");
 
   const [orderItems, setOrderItems] = useState([
     createBlankItem()
@@ -67,7 +68,10 @@ function NewOrder() {
       setProducts(savedProducts);
       setOrders(savedOrders);
     } catch (error) {
-      console.error("Could not load order data:", error);
+      console.error(
+        "Could not load order data:",
+        error
+      );
 
       alert(
         `The order form could not be loaded.\n\n${
@@ -100,16 +104,13 @@ function NewOrder() {
     });
   }, [orderItems, products]);
 
-  const orderRevenue = calculatedItems.reduce(
+  const catalogTotal = calculatedItems.reduce(
     (total, item) => total + item.lineRevenue,
     0
   );
 
-  const feeAmount = Number(fees) || 0;
-  const discountAmount = Number(discount) || 0;
-
-  const orderProfit =
-    orderRevenue - feeAmount - discountAmount;
+  const orderRevenue = Number(revenue) || 0;
+  const orderProfit = Number(profit) || 0;
 
   function updateItem(rowId, field, value) {
     setOrderItems((currentItems) =>
@@ -163,8 +164,29 @@ function NewOrder() {
       return;
     }
 
-    if (validItems.length !== calculatedItems.length) {
-      alert("Choose a product for every product row.");
+    if (
+      validItems.length !== calculatedItems.length
+    ) {
+      alert(
+        "Choose a product for every product row."
+      );
+      return;
+    }
+
+    if (
+      revenue === "" ||
+      !Number.isFinite(Number(revenue)) ||
+      Number(revenue) < 0
+    ) {
+      alert("Enter a valid revenue amount.");
+      return;
+    }
+
+    if (
+      profit === "" ||
+      !Number.isFinite(Number(profit))
+    ) {
+      alert("Enter a valid profit amount.");
       return;
     }
 
@@ -176,8 +198,10 @@ function NewOrder() {
         customer: customer.trim(),
         platform,
         revenue: orderRevenue,
-        fees: feeAmount,
-        discount: discountAmount,
+        profit: orderProfit,
+        fees: 0,
+        discount: 0,
+
         items: validItems.map((item) => ({
           productId: item.product.id,
           productName: item.product.name,
@@ -186,7 +210,9 @@ function NewOrder() {
               ? item.product.image
               : null,
           quantity: item.quantity,
-          priceAtSale: Number(item.product.price),
+          priceAtSale: Number(
+            item.product.price
+          ),
           lineRevenue: item.lineRevenue
         }))
       });
@@ -195,7 +221,10 @@ function NewOrder() {
 
       navigate("/");
     } catch (error) {
-      console.error("Could not save order:", error);
+      console.error(
+        "Could not save order:",
+        error
+      );
 
       alert(
         `The order could not be saved.\n\n${
@@ -254,7 +283,9 @@ function NewOrder() {
           >
             <option value="Etsy">Etsy</option>
             <option value="Depop">Depop</option>
-            <option value="Mercari">Mercari</option>
+            <option value="Mercari">
+              Mercari
+            </option>
           </select>
         </label>
 
@@ -263,7 +294,9 @@ function NewOrder() {
             type="checkbox"
             checked={deductInventory}
             onChange={(event) =>
-              setDeductInventory(event.target.checked)
+              setDeductInventory(
+                event.target.checked
+              )
             }
           />
 
@@ -291,7 +324,8 @@ function NewOrder() {
 
         {products.length === 0 && (
           <div className="empty-catalog">
-            Add products to your Product Catalog first.
+            Add products to your Product Catalog
+            first.
           </div>
         )}
 
@@ -302,14 +336,18 @@ function NewOrder() {
               key={item.rowId}
             >
               <div className="order-item-top">
-                <strong>Product {index + 1}</strong>
+                <strong>
+                  Product {index + 1}
+                </strong>
 
                 {orderItems.length > 1 && (
                   <button
                     type="button"
                     className="remove-item-button"
                     onClick={() =>
-                      removeProductRow(item.rowId)
+                      removeProductRow(
+                        item.rowId
+                      )
                     }
                   >
                     Remove
@@ -379,24 +417,27 @@ function NewOrder() {
                   )}
 
                   <div>
-                    <strong>{item.product.name}</strong>
+                    <strong>
+                      {item.product.name}
+                    </strong>
 
                     <p>
                       $
                       {Number(
                         item.product.price
                       ).toFixed(2)}{" "}
-                      each
+                      catalog price
                     </p>
 
                     <p>
-                      Line total: $
-                      {item.lineRevenue.toFixed(2)}
+                      Quantity: {item.quantity}
                     </p>
 
                     <p>
                       Current stock:{" "}
-                      {Number(item.product.stock) || 0}
+                      {Number(
+                        item.product.stock
+                      ) || 0}
                     </p>
                   </div>
                 </div>
@@ -406,30 +447,29 @@ function NewOrder() {
         </div>
 
         <label className="field-label">
-          Platform fees
+          Revenue
 
           <input
             type="number"
             min="0"
             step="0.01"
-            value={fees}
+            value={revenue}
             onChange={(event) =>
-              setFees(event.target.value)
+              setRevenue(event.target.value)
             }
-            placeholder="0.00"
+            placeholder={catalogTotal.toFixed(2)}
           />
         </label>
 
         <label className="field-label">
-          Discount or coupon
+          Profit
 
           <input
             type="number"
-            min="0"
             step="0.01"
-            value={discount}
+            value={profit}
             onChange={(event) =>
-              setDiscount(event.target.value)
+              setProfit(event.target.value)
             }
             placeholder="0.00"
           />
@@ -437,24 +477,16 @@ function NewOrder() {
 
         <div className="order-summary">
           <div>
-            <span>Order revenue</span>
-            <strong>${orderRevenue.toFixed(2)}</strong>
-          </div>
+            <span>Revenue</span>
 
-          <div>
-            <span>Platform fees</span>
-            <strong>${feeAmount.toFixed(2)}</strong>
-          </div>
-
-          <div>
-            <span>Discount</span>
             <strong>
-              ${discountAmount.toFixed(2)}
+              ${orderRevenue.toFixed(2)}
             </strong>
           </div>
 
           <div>
             <span>Inventory</span>
+
             <strong>
               {deductInventory
                 ? "Will be deducted"
@@ -463,8 +495,11 @@ function NewOrder() {
           </div>
 
           <div className="profit-row">
-            <span>Order profit</span>
-            <strong>${orderProfit.toFixed(2)}</strong>
+            <span>Profit</span>
+
+            <strong>
+              ${orderProfit.toFixed(2)}
+            </strong>
           </div>
         </div>
 
