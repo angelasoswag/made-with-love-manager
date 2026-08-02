@@ -2758,3 +2758,44 @@ button{
 }
 
 }
+/* FINAL iPHONE DATE FIELD FIX */
+
+.expenses-page .expense-form {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.expenses-page .field-label {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.expenses-page input[type="date"] {
+  display: block;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  padding: 16px;
+  overflow: hidden;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.expenses-page input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  width: 100%;
+  text-align: center;
+}
+
+@media (max-width: 620px) {
+  .expenses-page .expense-form {
+    padding: 20px 14px;
+  }
+
+  .expenses-page input[type="date"] {
+    font-size: 16px;
+  }
+}
