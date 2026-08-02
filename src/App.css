@@ -3841,3 +3841,32 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     padding-right: 6px !important;
   }
 }
+/* ===== FINAL DASHBOARD CARD NUMBER FIT ===== */
+
+@media (min-width: 700px) {
+  .dashboard-page .summary-card {
+    padding: 22px 12px !important;
+    overflow: hidden !important;
+  }
+
+  .dashboard-page .summary-card strong {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+
+    font-size: 34px !important;
+    line-height: 1 !important;
+    letter-spacing: -1.5px !important;
+
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+}
+
+@media (min-width: 700px) and (max-width: 1100px) {
+  .dashboard-page .summary-card strong {
+    font-size: 30px !important;
+    letter-spacing: -1px !important;
+  }
+}
