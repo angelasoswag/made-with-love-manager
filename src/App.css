@@ -2503,3 +2503,258 @@ grid-template-columns: repeat(6, minmax(0, 1fr));
     padding: 18px 16px;
   }
 }
+/* FINAL MOBILE NAV FIX */
+
+@media (max-width: 620px) {
+  .dashboard-shortcuts {
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 2px;
+
+    padding: 7px 4px;
+    border-radius: 22px;
+  }
+
+  .dashboard-shortcuts a {
+    min-width: 0;
+    min-height: 68px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+
+    gap: 5px;
+    padding: 7px 2px;
+    border-radius: 16px;
+
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .dashboard-shortcuts a span {
+    display: block;
+    width: 100%;
+
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 9px;
+    line-height: 1.1;
+    font-weight: 700;
+  }
+
+  .dashboard-shortcuts a.active {
+    background: #f7dce8;
+    color: #bd628e;
+  }
+
+  .app {
+    padding-bottom: 120px;
+  }
+}
+/* FIX EXPENSE DATE OVERFLOW */
+
+.expenses-page .expense-form,
+.expenses-page .field-label,
+.expenses-page .field-label input,
+.expenses-page .field-label select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.expenses-page .field-label input[type="date"] {
+  display: block;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  font-size: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+@media (max-width: 620px) {
+  .expenses-page .expense-form {
+    padding: 22px 16px;
+  }
+
+  .expenses-page .field-label input,
+  .expenses-page .field-label select {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+/* =====================================================
+   GLOBAL MOBILE DESIGN SYSTEM
+   Put at the VERY BOTTOM of App.css
+===================================================== */
+
+:root{
+  --page-width: 760px;
+
+  --space-xs: 8px;
+  --space-sm: 14px;
+  --space-md: 20px;
+  --space-lg: 28px;
+  --space-xl: 40px;
+
+  --radius: 24px;
+  --radius-small: 18px;
+
+  --card-padding: 24px;
+
+  --pink:#c57ba2;
+  --border:#eed7e3;
+  --background:#fffafd;
+}
+
+/* PAGE */
+
+.page,
+.dashboard-page,
+.orders-page,
+.products-page,
+.analytics-page,
+.expenses-page,
+.new-order-page{
+    width:min(var(--page-width),92%);
+    margin:0 auto;
+    padding-top:36px;
+    padding-bottom:140px;
+}
+
+/* TITLES */
+
+.page h1{
+    margin-bottom:10px;
+    line-height:1.05;
+}
+
+.page-subtitle{
+    margin-bottom:36px;
+}
+
+/* CARDS */
+
+.card,
+.panel,
+.receipt-card,
+.dashboard-card,
+.summary-card,
+.order-card,
+.product-card,
+.analytics-card{
+    margin-bottom:24px;
+    padding:var(--card-padding);
+    border-radius:var(--radius);
+}
+
+/* FORMS */
+
+form{
+    display:flex;
+    flex-direction:column;
+    gap:24px;
+}
+
+.field-label{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+input,
+select,
+textarea{
+    width:100%;
+    box-sizing:border-box;
+    min-height:60px;
+    padding:16px 18px;
+    border-radius:18px;
+}
+
+/* BUTTONS */
+
+button{
+    min-height:54px;
+    border-radius:18px;
+}
+
+/* HEADINGS INSIDE CARDS */
+
+.card h2,
+.panel h2,
+.receipt-card h2{
+    margin-bottom:22px;
+}
+
+/* GRID SPACING */
+
+.stats-grid,
+.dashboard-grid,
+.analytics-grid{
+    gap:20px;
+}
+
+/* PRODUCT / ORDER CARDS */
+
+.order-item-card,
+.product-item-card{
+    margin-top:20px;
+    padding:20px;
+    border-radius:20px;
+}
+
+/* MOBILE */
+
+@media (max-width:620px){
+
+.page,
+.dashboard-page,
+.orders-page,
+.products-page,
+.analytics-page,
+.expenses-page,
+.new-order-page{
+    width:calc(100% - 28px);
+    padding-top:28px;
+    padding-bottom:125px;
+}
+
+.card,
+.panel,
+.receipt-card,
+.dashboard-card,
+.summary-card,
+.order-card,
+.product-card{
+    padding:20px;
+    margin-bottom:20px;
+}
+
+form{
+    gap:20px;
+}
+
+.field-label{
+    gap:8px;
+}
+
+h1{
+    margin-bottom:8px;
+}
+
+h2{
+    margin-bottom:16px;
+}
+
+button{
+    min-height:50px;
+}
+
+}
