@@ -3870,3 +3870,98 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     letter-spacing: -1px !important;
   }
 }
+/* ===== Desktop analytics card fix ===== */
+@media (min-width: 900px) {
+  .analytics-summary-grid .summary-card {
+    min-width: 190px !important;
+    padding: 22px 18px !important;
+    text-align: center !important;
+    overflow: hidden !important;
+  }
+
+  .analytics-summary-grid .summary-card strong {
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 2.6rem !important;
+    line-height: 1 !important;
+    letter-spacing: -0.03em !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+  }
+
+  .analytics-summary-grid {
+    grid-template-columns: repeat(4, minmax(190px, 1fr)) !important;
+    gap: 22px !important;
+  }
+}
+/* ===== FIX TOP PRODUCTS PROFIT OVERFLOW ===== */
+
+@media (min-width: 700px) {
+  .dashboard-page .top-product-row {
+    display: grid !important;
+    grid-template-columns:
+      44px
+      58px
+      minmax(0, 1fr) !important;
+    grid-template-areas:
+      "rank image info"
+      "rank image profit" !important;
+
+    column-gap: 14px !important;
+    row-gap: 6px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 20px 0 !important;
+  }
+
+  .dashboard-page .product-rank {
+    grid-area: rank !important;
+  }
+
+  .dashboard-page .top-product-image {
+    grid-area: image !important;
+    width: 58px !important;
+    height: 58px !important;
+    min-width: 58px !important;
+  }
+
+  .dashboard-page .top-product-info {
+    grid-area: info !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .dashboard-page .top-product-info strong {
+    display: block !important;
+    width: 100% !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.25 !important;
+  }
+
+  .dashboard-page .top-product-revenue {
+    grid-area: profit !important;
+    justify-self: start !important;
+
+    width: auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    text-align: left !important;
+    white-space: nowrap !important;
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .dashboard-page .top-product-revenue small {
+    display: inline !important;
+    font-size: inherit !important;
+  }
+}
