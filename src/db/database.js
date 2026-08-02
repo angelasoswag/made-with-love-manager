@@ -131,6 +131,7 @@ export async function getProducts() {
       cost,
       stock,
       low_stock_threshold,
+image,
       active,
       created_at
     `)
