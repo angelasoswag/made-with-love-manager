@@ -3305,3 +3305,27 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.8;
   cursor: pointer;
 }
+/* Recent order product photo */
+
+.order-avatar {
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff4f8;
+}
+
+.order-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.order-avatar span {
+  font-size: 24px;
+}

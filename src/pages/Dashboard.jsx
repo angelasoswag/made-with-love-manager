@@ -320,9 +320,19 @@ function Dashboard() {
                     className="recent-order-row"
                     key={order.id}
                   >
-                    <div className="order-avatar">
-                      🌷
-                    </div>
+                   <div className="order-avatar">
+  {order.items?.[0]?.productImage ? (
+    <img
+      src={order.items[0].productImage}
+      alt={
+        order.items[0].productName ||
+        "Order product"
+      }
+    />
+  ) : (
+    <span>🌷</span>
+  )}
+</div>
 
                     <div className="recent-order-info">
                       <strong>
