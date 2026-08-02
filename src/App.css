@@ -3552,3 +3552,47 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     white-space: normal !important;
   }
 }
+/* ===== FIT DASHBOARD NUMBERS INSIDE CARDS ===== */
+
+.summary-card {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+.summary-card strong {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+
+  font-size: clamp(28px, 8vw, 48px) !important;
+  line-height: 1.05 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+
+  text-align: center !important;
+  letter-spacing: -1.5px !important;
+}
+
+.summary-card span,
+.summary-card small {
+  max-width: 100% !important;
+  text-align: center !important;
+  overflow-wrap: normal !important;
+}
+
+/* Extra-small phone adjustment */
+@media (max-width: 430px) {
+  .summary-card {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .summary-card strong {
+    font-size: clamp(26px, 7.5vw, 38px) !important;
+    letter-spacing: -1px !important;
+  }
+}
