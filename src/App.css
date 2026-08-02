@@ -3439,3 +3439,116 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .order-history-item-total {
   margin-left: auto !important;
 }
+/* ===== FIX TOP PRODUCTS DESKTOP LAYOUT ===== */
+
+.top-product-list {
+  width: 100% !important;
+}
+
+.top-product-row {
+  display: grid !important;
+  grid-template-columns:
+    48px
+    64px
+    minmax(180px, 1fr)
+    auto !important;
+  grid-template-areas:
+    "rank image info profit" !important;
+
+  align-items: center !important;
+  gap: 18px !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 24px 0 !important;
+}
+
+.product-rank {
+  grid-area: rank !important;
+  width: 48px !important;
+  min-width: 48px !important;
+}
+
+.top-product-image {
+  grid-area: image !important;
+
+  width: 64px !important;
+  height: 64px !important;
+  min-width: 64px !important;
+  max-width: 64px !important;
+}
+
+.top-product-image img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+.top-product-info {
+  grid-area: info !important;
+  min-width: 180px !important;
+  width: auto !important;
+}
+
+.top-product-info strong {
+  display: block !important;
+  width: 100% !important;
+
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+
+  line-height: 1.25 !important;
+}
+
+.top-product-info span {
+  display: block !important;
+  margin-top: 6px !important;
+}
+
+.top-product-revenue {
+  grid-area: profit !important;
+
+  justify-self: end !important;
+  text-align: right !important;
+
+  min-width: 110px !important;
+  white-space: nowrap !important;
+}
+
+.top-product-revenue small {
+  display: inline !important;
+  font-size: inherit !important;
+}
+
+/* Mobile layout */
+@media (max-width: 699px) {
+  .top-product-row {
+    grid-template-columns:
+      48px
+      64px
+      minmax(0, 1fr) !important;
+
+    grid-template-areas:
+      "rank image info"
+      "rank image profit" !important;
+
+    gap: 12px !important;
+  }
+
+  .top-product-info {
+    min-width: 0 !important;
+  }
+
+  .top-product-info strong {
+    overflow-wrap: anywhere !important;
+  }
+
+  .top-product-revenue {
+    justify-self: start !important;
+    text-align: left !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+  }
+}
