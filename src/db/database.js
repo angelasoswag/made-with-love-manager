@@ -205,6 +205,7 @@ async function changeOrderStock(items, direction) {
 
 /* ---------- PRODUCTS ---------- */
 
+git remote add origin
 export async function getProducts() {
   const user = await getSignedInUser();
 
@@ -224,6 +225,14 @@ export async function getProducts() {
   if (error) throw error;
 
   return data ?? [];
+}
+
+export async function getActiveProducts() {
+  const products = await getProducts();
+
+  return products.filter(
+    (product) => product.active !== false
+  );
 }
 
 export async function addProduct(product) {
