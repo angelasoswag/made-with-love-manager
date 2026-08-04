@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   addExpense,
@@ -7,57 +6,206 @@ import {
   getExpenses
 } from "../db/database";
 
+function getToday() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+
+  const year = parts.find(
+    (part) => part.type === "year"
+  )?.value;
+
+  const month = parts.find(
+    (part) => part.type === "month"
+  )?.value;
+
+  const day = parts.find(
+    (part) => part.type === "day"
+  )?.value;
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatExpenseDate(dateValue) {
+  if (!dateValue) return "";
+
+  const [year, month, day] = dateValue.split("-");
+
+  if (!year || !month || !day) {
+    return dateValue;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(
+    new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day)
+    )
+  );
+}
+
 function Expenses() {
   const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
-  const [date, setDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
-
+  const [date, setDate] = useState(getToday);
   const [vendor, setVendor] = useState("");
-  const [category, setCategory] = useState("Supplies");
-  const [description, setDescription] = useState("");
+  const [category, setCategory] =
+    useState("Supplies");
+  const [description, setDescription] =
+    useState("");
   const [amount, setAmount] = useState("");
 
   useEffect(() => {
-    loadExpenses();
+    let isMounted = true;
+
+    async function loadInitialExpenses() {
+      try {
+        setLoading(true);
+
+        const savedExpenses = await getExpenses();
+
+        if (!isMounted) return;
+
+        const sortedExpenses = [
+          ...(savedExpenses || [])
+        ].sort((a, b) =>
+          String(b.date || "").localeCompare(
+            String(a.date || "")
+          )
+        );
+
+        setExpenses(sortedExpenses);
+      } catch (error) {
+        console.error(
+          "Could not load expenses:",
+          error
+        );
+
+        if (isMounted) {
+          alert("The expenses could not be loaded.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadInitialExpenses();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   async function loadExpenses() {
     try {
       const savedExpenses = await getExpenses();
 
-      savedExpenses.sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
+      const sortedExpenses = [
+        ...(savedExpenses || [])
+      ].sort((a, b) =>
+        String(b.date || "").localeCompare(
+          String(a.date || "")
+        )
       );
 
-      setExpenses(savedExpenses);
+      setExpenses(sortedExpenses);
     } catch (error) {
-      console.error("Could not load expenses:", error);
+      console.error(
+        "Could not reload expenses:",
+        error
+      );
+
+      throw error;
     }
   }
 
+  const expenseTotals = useMemo(() => {
+    const currentMonth = getToday().slice(0, 7);
+
+    return expenses.reduce(
+      (totals, expense) => {
+        const expenseAmount =
+          Number(expense.amount) || 0;
+
+        totals.allTime += expenseAmount;
+
+        if (
+          String(expense.date || "").slice(0, 7) ===
+          currentMonth
+        ) {
+          totals.thisMonth += expenseAmount;
+        }
+
+        return totals;
+      },
+      {
+        thisMonth: 0,
+        allTime: 0
+      }
+    );
+  }, [expenses]);
+
+  const currentMonthLabel = useMemo(() => {
+    const [year, month] = getToday().split("-");
+
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      year: "numeric"
+    }).format(
+      new Date(
+        Number(year),
+        Number(month) - 1,
+        1
+      )
+    );
+  }, []);
+
   async function saveExpense() {
+    if (saving) return;
+
+    if (!date) {
+      alert("Choose an expense date.");
+      return;
+    }
+
     if (!description.trim()) {
       alert("Enter a description.");
       return;
     }
 
-    if (amount === "" || Number(amount) <= 0) {
+    if (
+      amount === "" ||
+      !Number.isFinite(Number(amount)) ||
+      Number(amount) <= 0
+    ) {
       alert("Enter a valid amount.");
       return;
     }
 
     try {
+      setSaving(true);
+
       await addExpense({
         date,
-        vendor,
+        vendor: vendor.trim(),
         category,
-        description,
+        description: description.trim(),
         amount: Number(amount)
       });
 
-      setDate(new Date().toISOString().slice(0, 10));
+      setDate(getToday());
       setVendor("");
       setCategory("Supplies");
       setDescription("");
@@ -65,12 +213,24 @@ function Expenses() {
 
       await loadExpenses();
     } catch (error) {
-      console.error("Could not save expense:", error);
-      alert("The expense could not be saved.");
+      console.error(
+        "Could not save expense:",
+        error
+      );
+
+      alert(
+        `The expense could not be saved.\n\n${
+          error.message || "Unknown error"
+        }`
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
   async function removeExpense(expenseId) {
+    if (deletingId) return;
+
     const confirmed = window.confirm(
       "Delete this expense?"
     );
@@ -78,40 +238,63 @@ function Expenses() {
     if (!confirmed) return;
 
     try {
+      setDeletingId(expenseId);
+
       await deleteExpense(expenseId);
       await loadExpenses();
     } catch (error) {
-      console.error("Could not delete expense:", error);
-      alert("The expense could not be deleted.");
+      console.error(
+        "Could not delete expense:",
+        error
+      );
+
+      alert(
+        `The expense could not be deleted.\n\n${
+          error.message || "Unknown error"
+        }`
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
-
-  const totalExpenses = expenses.reduce(
-    (total, expense) =>
-      total + (Number(expense.amount) || 0),
-    0
-  );
 
   return (
     <main className="app expenses-page">
       <header className="page-header">
-      
-
         <div>
-         <h1>Expenses</h1>
+          <h1>Expenses</h1>
 
-<p className="page-description">
-  Track every business expense.
-</p>
+          <p className="page-description">
+            Track every business expense.
+          </p>
         </div>
       </header>
 
-      <section className="expense-total-card">
-        <span>🤍 Total Expenses</span>
+      <section className="expense-totals-grid">
+        <article className="expense-total-card">
+          <span>🌷 This Month</span>
 
-        <strong>
-          ${totalExpenses.toFixed(2)}
-        </strong>
+          <strong>
+            ${expenseTotals.thisMonth.toFixed(2)}
+          </strong>
+
+          <small>{currentMonthLabel}</small>
+        </article>
+
+        <article className="expense-total-card">
+          <span>🤍 All-Time Expenses</span>
+
+          <strong>
+            ${expenseTotals.allTime.toFixed(2)}
+          </strong>
+
+          <small>
+            {expenses.length}{" "}
+            {expenses.length === 1
+              ? "expense"
+              : "expenses"}
+          </small>
+        </article>
       </section>
 
       <section className="expense-form">
@@ -207,7 +390,7 @@ function Expenses() {
 
           <input
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             value={amount}
             onChange={(event) =>
@@ -221,17 +404,25 @@ function Expenses() {
           type="button"
           className="save-button"
           onClick={saveExpense}
+          disabled={saving || loading}
         >
-          💌 Save Expense
+          {saving
+            ? "Saving..."
+            : "💌 Save Expense"}
         </button>
       </section>
 
       <section className="expense-history">
         <h2>🐚 Expense History</h2>
 
-        {expenses.length === 0 ? (
+        {loading ? (
+          <div className="dashboard-empty">
+            <p>Loading expenses...</p>
+          </div>
+        ) : expenses.length === 0 ? (
           <div className="dashboard-empty">
             <span>🐚</span>
+
             <p>No expenses have been added yet.</p>
           </div>
         ) : (
@@ -248,17 +439,25 @@ function Expenses() {
 
                   <p>
                     {expense.category}
+
                     {expense.vendor
                       ? ` · ${expense.vendor}`
                       : ""}
                   </p>
 
-                  <small>{expense.date}</small>
+                  <small>
+                    {formatExpenseDate(
+                      expense.date
+                    )}
+                  </small>
                 </div>
 
                 <div className="expense-card-right">
                   <strong>
-                    ${Number(expense.amount).toFixed(2)}
+                    $
+                    {Number(
+                      expense.amount || 0
+                    ).toFixed(2)}
                   </strong>
 
                   <button
@@ -266,8 +465,13 @@ function Expenses() {
                     onClick={() =>
                       removeExpense(expense.id)
                     }
+                    disabled={
+                      deletingId === expense.id
+                    }
                   >
-                    Delete
+                    {deletingId === expense.id
+                      ? "Deleting..."
+                      : "Delete"}
                   </button>
                 </div>
               </article>

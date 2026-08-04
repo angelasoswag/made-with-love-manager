@@ -16,7 +16,26 @@ function createBlankItem() {
 }
 
 function getToday() {
-  return new Date().toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+
+  const year = parts.find(
+    (part) => part.type === "year"
+  )?.value;
+
+  const month = parts.find(
+    (part) => part.type === "month"
+  )?.value;
+
+  const day = parts.find(
+    (part) => part.type === "day"
+  )?.value;
+
+  return `${year}-${month}-${day}`;
 }
 
 function getProductImage(image) {
@@ -34,8 +53,13 @@ function NewOrder() {
 
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [orderDate, setOrderDate] = useState(getToday());
+  const [orderDate, setOrderDate] = useState(
+    getToday
+  );
+
   const [deductInventory, setDeductInventory] =
     useState(true);
 
@@ -50,42 +74,63 @@ function NewOrder() {
   ]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    let isMounted = true;
 
-  async function loadData() {
-    try {
-      const [savedProducts, savedOrders] =
-        await Promise.all([
-          getActiveProducts(),
-          getOrders()
-        ]);
+    async function loadData() {
+      try {
+        setLoading(true);
 
-      savedProducts.sort((a, b) =>
-        a.name.localeCompare(b.name)
-      );
+        const [savedProducts, savedOrders] =
+          await Promise.all([
+            getActiveProducts(),
+            getOrders()
+          ]);
 
-      setProducts(savedProducts);
-      setOrders(savedOrders);
-    } catch (error) {
-      console.error(
-        "Could not load order data:",
-        error
-      );
+        if (!isMounted) return;
 
-      alert(
-        `The order form could not be loaded.\n\n${
-          error.message || "Unknown error"
-        }`
-      );
+        const sortedProducts = [
+          ...(savedProducts || [])
+        ].sort((a, b) =>
+          String(a.name || "").localeCompare(
+            String(b.name || "")
+          )
+        );
+
+        setProducts(sortedProducts);
+        setOrders(savedOrders || []);
+      } catch (error) {
+        console.error(
+          "Could not load order data:",
+          error
+        );
+
+        if (isMounted) {
+          alert(
+            `The order form could not be loaded.\n\n${
+              error.message || "Unknown error"
+            }`
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     }
-  }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const calculatedItems = useMemo(() => {
     return orderItems.map((item) => {
       const product = products.find(
         (catalogProduct) =>
-          catalogProduct.id === item.productId
+          String(catalogProduct.id) ===
+          String(item.productId)
       );
 
       const quantity = Math.max(
@@ -98,16 +143,18 @@ function NewOrder() {
         product,
         quantity,
         lineRevenue: product
-          ? Number(product.price) * quantity
+          ? Number(product.price || 0) * quantity
           : 0
       };
     });
   }, [orderItems, products]);
 
-  const catalogTotal = calculatedItems.reduce(
-    (total, item) => total + item.lineRevenue,
-    0
-  );
+  const catalogTotal = useMemo(() => {
+    return calculatedItems.reduce(
+      (total, item) => total + item.lineRevenue,
+      0
+    );
+  }, [calculatedItems]);
 
   const orderRevenue = Number(revenue) || 0;
   const orderProfit = Number(profit) || 0;
@@ -145,6 +192,8 @@ function NewOrder() {
   }
 
   async function saveOrder() {
+    if (saving) return;
+
     if (!orderDate) {
       alert("Choose the date ordered.");
       return;
@@ -191,6 +240,8 @@ function NewOrder() {
     }
 
     try {
+      setSaving(true);
+
       await addOrder({
         orderNumber: orders.length + 1,
         orderDate,
@@ -211,14 +262,13 @@ function NewOrder() {
               : null,
           quantity: item.quantity,
           priceAtSale: Number(
-            item.product.price
+            item.product.price || 0
           ),
           lineRevenue: item.lineRevenue
         }))
       });
 
       alert("💌 Order saved!");
-
       navigate("/");
     } catch (error) {
       console.error(
@@ -231,6 +281,8 @@ function NewOrder() {
           error.message || "Unknown error"
         }`
       );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -322,7 +374,13 @@ function NewOrder() {
           </button>
         </div>
 
-        {products.length === 0 && (
+        {loading && (
+          <div className="empty-catalog">
+            Loading products...
+          </div>
+        )}
+
+        {!loading && products.length === 0 && (
           <div className="empty-catalog">
             Add products to your Product Catalog
             first.
@@ -345,9 +403,7 @@ function NewOrder() {
                     type="button"
                     className="remove-item-button"
                     onClick={() =>
-                      removeProductRow(
-                        item.rowId
-                      )
+                      removeProductRow(item.rowId)
                     }
                   >
                     Remove
@@ -367,6 +423,7 @@ function NewOrder() {
                       event.target.value
                     )
                   }
+                  disabled={loading}
                 >
                   <option value="">
                     Choose a product
@@ -424,7 +481,7 @@ function NewOrder() {
                     <p>
                       $
                       {Number(
-                        item.product.price
+                        item.product.price || 0
                       ).toFixed(2)}{" "}
                       catalog price
                     </p>
@@ -507,9 +564,13 @@ function NewOrder() {
           type="button"
           className="save-button"
           onClick={saveOrder}
-          disabled={products.length === 0}
+          disabled={
+            loading ||
+            saving ||
+            products.length === 0
+          }
         >
-          Save Order
+          {saving ? "Saving..." : "Save Order"}
         </button>
       </section>
     </div>
