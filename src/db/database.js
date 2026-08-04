@@ -431,9 +431,9 @@ export async function addOrder(order) {
   const newOrder = {
     user_id: user.id,
     order_number: order.orderNumber || null,
-    order_date:
-      order.orderDate ||
-      new Date().toISOString().slice(0, 10),
+   order_date:
+  order.orderDate ||
+  new Date().toLocaleDateString("en-CA"),
     deduct_inventory: deductInventory,
     customer: String(
       order.customer || ""
@@ -570,8 +570,10 @@ export async function addExpense(expense) {
   const newExpense = {
     user_id: user.id,
     date:
-      expense.date ||
-      new Date().toISOString().slice(0, 10),
+  expense.date ||
+  new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Los_Angeles",
+  }),
     vendor: String(
       expense.vendor || ""
     ).trim(),

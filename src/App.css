@@ -4372,3 +4372,79 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 13px !important;
   }
 }
+/* =========================
+   IPAD / TABLET DASHBOARD
+   ========================= */
+
+@media (min-width: 700px) and (max-width: 1100px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dashboard-page,
+  .dashboard-container,
+  .dashboard-content,
+  main {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .dashboard-content {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  /* Change the four cards into a 2 x 2 grid */
+  .dashboard-stats,
+  .stats-grid,
+  .summary-grid,
+  .metric-grid,
+  .dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+  }
+
+  .dashboard-stats > *,
+  .stats-grid > *,
+  .summary-grid > *,
+  .metric-grid > *,
+  .dashboard-cards > * {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    box-sizing: border-box;
+  }
+
+  /* Stop large dollar amounts from overflowing */
+  .stat-value,
+  .metric-value,
+  .card-value,
+  .summary-value {
+    font-size: clamp(2rem, 5vw, 3.3rem);
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .goal-card,
+  .recent-orders,
+  .latest-activity {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Give the fixed bottom navigation breathing room */
+  .dashboard-page,
+  .dashboard-container {
+    padding-bottom: 110px;
+  }
+}
